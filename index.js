@@ -1,54 +1,66 @@
-const http = require('http');
-const https = require('https');
-const url = require('url');
 
-const PORT = 3000;
+const { Hono } = require('hono');
 
-const server = http.createServer((req, res) => {
-  // Parse the incoming request URL
-  const parsedUrl = url.parse(req.url);
+const app = new Hono();
+
+const DEFAULT_HOST = 'news.ycombinator.com';
+const PHILIP_HOST = 'google.com';
+
+// Middleware: Parse cookies from header
+const parseCookies = async (c, next) => {
+  const cookies = {};
+  const cookieHeader = c.req.header('cookie');
   
-  // Target URL: google.com + the path from the request
-  const targetUrl = `https://news.ycombinator.com${parsedUrl.path}`;
+  if (cookieHeader) {
+    cookieHeader.split(';').forEach(cookie => {
+      const [key, value] = cookie.trim().split('=');
+      cookies[key] = value;
+    });
+  }
   
-  console.log(`Proxying: ${req.url} -> ${targetUrl}`);
+  c.set('cookies', cookies);
+  await next();
+};
+
+// Middleware: Select target host based on user cookie
+const selectTargetHost = async (c, next) => {
+  const cookies = c.get('cookies');
+  const targetHost = cookies.user === 'philip' ? PHILIP_HOST : DEFAULT_HOST;
   
-  // Parse target URL
-  const target = url.parse(targetUrl);
+  c.set('targetHost', targetHost);
+  await next();
+};
+
+// Middleware: Log the proxied request
+const logRequest = async (c, next) => {
+  const targetHost = c.get('targetHost');
+  console.log(`Proxying: ${c.req.path} -> https://${targetHost}${c.req.path}`);
+  await next();
+};
+
+// Compose all middleware
+app.use('*', parseCookies, selectTargetHost, logRequest);
+
+// Main proxy handler
+app.all('*', async (c) => {
+  const targetHost = c.get('targetHost');
+  const url = new URL(c.req.url);
+  const targetUrl = `https://${targetHost}${url.pathname}${url.search}`;
   
-  // Proxy options
-  const options = {
-    hostname: target.hostname,
-    port: 443,
-    path: target.path,
-    method: req.method,
-    headers: {
-      ...req.headers,
-      host: target.hostname // Override host header
-    }
-  };
-  
-  // Make the proxy request
-  const proxyReq = https.request(options, (proxyRes) => {
-    // Forward status code and headers
-    res.writeHead(proxyRes.statusCode, proxyRes.headers);
+  try {
+    const response = await fetch(targetUrl, {
+      method: c.req.method,
+      headers: c.req.raw.headers,
+      body: c.req.raw.body,
+    });
     
-    // Pipe the response back to the client
-    proxyRes.pipe(res);
-  });
-  
-  // Handle errors
-  proxyReq.on('error', (err) => {
-    console.error('Proxy error:', err);
-    res.writeHead(500, { 'Content-Type': 'text/plain' });
-    res.end('Proxy error occurred');
-  });
-  
-  // Pipe the request body to the proxy request
-  req.pipe(proxyReq);
-});
-
-server.listen(PORT, () => {
-  console.log(`Proxy server running on http://localhost:${PORT}`);
-  console.log(`Example: http://localhost:${PORT}/foo will proxy to https://google.com/foo`);
+    // Stream the response back (Workers handles this perfectly)
+    return new Response(response.body, {
+      status: response.status,
+      headers: response.headers,
+    });
+  } catch (error) {
+    console.error('Proxy error:', error);
+    return c.text('Proxy error occurred', 500);
+  }
 });
