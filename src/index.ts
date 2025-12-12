@@ -1,14 +1,21 @@
+import { Hono, MiddlewareHandler } from 'hono';
 
-const { Hono } = require('hono');
+// Define context types for TypeScript
+type Env = {
+  Variables: {
+    cookies: Record<string, string>;
+    targetHost: string;
+  };
+};
 
-const app = new Hono();
+const app = new Hono<Env>();
 
 const DEFAULT_HOST = 'news.ycombinator.com';
 const PHILIP_HOST = 'google.com';
 
 // Middleware: Parse cookies from header
-const parseCookies = async (c, next) => {
-  const cookies = {};
+const parseCookies: MiddlewareHandler<Env>  = async (c, next) => {
+  const cookies: Record<string, string> = {};
   const cookieHeader = c.req.header('cookie');
   
   if (cookieHeader) {
@@ -23,7 +30,7 @@ const parseCookies = async (c, next) => {
 };
 
 // Middleware: Select target host based on user cookie
-const selectTargetHost = async (c, next) => {
+const selectTargetHost: MiddlewareHandler<Env> = async (c, next) => {
   const cookies = c.get('cookies');
   const targetHost = cookies.user === 'philip' ? PHILIP_HOST : DEFAULT_HOST;
   
@@ -32,7 +39,7 @@ const selectTargetHost = async (c, next) => {
 };
 
 // Middleware: Log the proxied request
-const logRequest = async (c, next) => {
+const logRequest: MiddlewareHandler<Env> = async (c, next) => {
   const targetHost = c.get('targetHost');
   console.log(`Proxying: ${c.req.path} -> https://${targetHost}${c.req.path}`);
   await next();
@@ -54,7 +61,6 @@ app.all('*', async (c) => {
       body: c.req.raw.body,
     });
     
-    // Stream the response back (Workers handles this perfectly)
     return new Response(response.body, {
       status: response.status,
       headers: response.headers,
@@ -64,3 +70,18 @@ app.all('*', async (c) => {
     return c.text('Proxy error occurred', 500);
   }
 });
+
+export default app;
+
+// For Node.js server
+// server.js or add below to same file
+/*
+import { serve } from '@hono/node-server';
+
+serve({
+  fetch: app.fetch,
+  port: Number(process.env.PORT) || 3000,
+}, (info) => {
+  console.log(`Server running on http://localhost:${info.port}`);
+});
+*/
