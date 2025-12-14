@@ -1,4 +1,13 @@
 import { MiddlewareHandler } from 'hono';
+import { db } from './db';
+import { Env } from './types';
+import * as schema from './db/schema';
+import { eq } from 'drizzle-orm';
+
+export const provideDb: MiddlewareHandler<Env> = async (c, next) => {
+  c.set('db', db);
+  await next();
+};
 
 // Middleware: Parse cookies from header
 export const parseCookies: MiddlewareHandler<Env> = async (c, next) => {
@@ -22,9 +31,20 @@ export const parseCookies: MiddlewareHandler<Env> = async (c, next) => {
 export const selectTargetHost: MiddlewareHandler<Env> = async (c, next) => {
   const cookies = c.get('cookies');
 
-  // TODO check cookies.user
-  const targetHost = 'news.ycombinator.com';
-  
+  const url = new URL(c.req.url);
+  const initialPart = url.host.split('.')[0];
+  const db = c.get('db');
+
+  const rows = await db
+    .select()
+    .from(schema.domains)
+    .where(eq(schema.domains.domain_slug, initialPart));
+
+  let targetHost = '';
+  if (rows.length === 1) {
+    targetHost = rows[0].cleartext;
+  }
+
   c.set('targetHost', targetHost);
   await next();
 };

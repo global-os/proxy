@@ -1,15 +1,17 @@
 import { Hono, MiddlewareHandler } from 'hono';
 import { serve } from '@hono/node-server';
 
-import { db, testConnection } from './db';
+import { testConnection } from './db';
 import * as schema from './db/schema';
 import * as middleware from './middleware'
 import { eq } from 'drizzle-orm';
+import { Env } from './types';
 
 const app = new Hono<Env>();
 
 app.use(
   '*',
+  middleware.provideDb,
   middleware.parseCookies,
   middleware.selectTargetHost,
   middleware.logRequest
@@ -21,6 +23,8 @@ app.all('*', async (c) => {
   const host = url.host;
 
   const targetUrl = `https://${targetHost}${url.pathname}${url.search}`;
+
+  const db = c.get('db');
 
   const userDomains = await db
     .select()
