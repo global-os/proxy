@@ -6,11 +6,11 @@ import * as schema from './schema';
 
 const dbConfig = {
   connectionString: process.env.DATABASE_URL,
-  host: process.env.PGHOST,
-  port: parseInt(process.env.PGPORT ?? '5432'),
-  user: process.env.PGUSER,
-  password: process.env.PGPASSWORD,
-  database: process.env.PGDATABASE,
+  // host: process.env.PGHOST,
+  // port: parseInt(process.env.PGPORT ?? '5432'),
+  // user: process.env.PGUSER,
+  // password: process.env.PGPASSWORD,
+  // database: process.env.PGDATABASE,
 };
 
 console.log('dbconfig is', dbConfig)
