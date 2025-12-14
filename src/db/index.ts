@@ -6,6 +6,7 @@ import * as schema from './schema';
 
 // Create connection pool
 const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
   host: process.env.PGHOST,
   port: parseInt(process.env.PGPORT ?? '5432'),
   user: process.env.PGUSER,
@@ -14,3 +15,14 @@ const pool = new Pool({
 });
 
 export const db = drizzle(pool, { schema });
+
+// Test connection on startup
+export async function testConnection() {
+  try {
+    await pool.query('SELECT 1');
+    console.log('Database connected');
+  } catch (error) {
+    console.error('Database connection failed:', error);
+    throw error;
+  }
+}

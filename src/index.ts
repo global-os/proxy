@@ -1,7 +1,7 @@
 import { Hono, MiddlewareHandler } from 'hono';
 import { serve } from '@hono/node-server';
 
-import { db } from './db';
+import { db, testConnection } from './db';
 import * as schema from './db/schema';
 import * as middleware from './middleware'
 import { eq } from 'drizzle-orm';
@@ -23,16 +23,16 @@ app.all('*', async (c) => {
   const targetUrl = `https://${targetHost}${url.pathname}${url.search}`;
 
   const userDomains = await db
-  .select()
-  .from(schema.domains)
-  .where(eq(schema.domains.user_id, 123));
+    .select()
+    .from(schema.domains)
+    .where(eq(schema.domains.user_id, 123));
 
   console.log('user domains', userDomains)
-  
+
   try {
     // Build clean headers
     const requestHeaders: Record<string, string> = {};
-    
+
     // Copy only safe headers
     const safeHeaders = [
       'accept',
@@ -44,25 +44,25 @@ app.all('*', async (c) => {
       'cookie',  // Forward cookies to target
       'content-type',  // Important for POST requests
     ];
-    
+
     c.req.raw.headers.forEach((value, key) => {
       // if (safeHeaders.includes(key.toLowerCase())) {
-        requestHeaders[key] = value;
+      requestHeaders[key] = value;
       // }
     });
-    
+
     // Set the correct host
     requestHeaders['host'] = targetHost;
-    
+
     // Handle request body for POST/PUT/PATCH
     const hasBody = c.req.method !== 'GET' && c.req.method !== 'HEAD';
-    
+
     const fetchOptions: RequestInit = {
       method: c.req.method,
       headers: requestHeaders,
       redirect: 'manual',
     };
-    
+
     if (hasBody) {
       // Read the body as an ArrayBuffer instead of streaming
       console.log(await c.req.text());
@@ -74,25 +74,25 @@ app.all('*', async (c) => {
     }
 
     console.log('fetch ' + c.req.method + ' response:');
-    
+
     const response = await fetch(targetUrl, fetchOptions);
-    
+
     console.log(response.headers);
-    
+
     // Node's fetch automatically decompresses, so remove encoding headers
     const responseHeaders = new Headers(response.headers);
     responseHeaders.delete('content-encoding');
     responseHeaders.delete('content-length'); // Wrong after decompression
-    
+
     // Remove security headers that break proxying
     responseHeaders.delete('content-security-policy');
     responseHeaders.delete('content-security-policy-report-only');
     responseHeaders.delete('x-frame-options');
     responseHeaders.delete('strict-transport-security');
-    
+
     // Handle set-cookie specially (it can have multiple values)
     // Note: For cookies to work across domains, we'd need to rewrite them
-    
+
     console.log('Set-Cookie headers:', response.headers.getSetCookie?.() || 'none');
 
     const init = {
@@ -101,7 +101,7 @@ app.all('*', async (c) => {
       headers: responseHeaders,
     };
     console.log(init);
-    
+
     return new Response(response.body, init);
   } catch (error) {
     console.error('Proxy error:', error);
@@ -109,11 +109,17 @@ app.all('*', async (c) => {
   }
 });
 
-serve({
-  fetch: app.fetch,
-  port: Number(process.env.PORT) || 3000,
-}, (info) => {
-  console.log(`Server running on http://localhost:${info.port}`);
-});
+async function main() {
+  await testConnection();
+
+  serve({
+    fetch: app.fetch,
+    port: Number(process.env.PORT) || 3000,
+  }, (info) => {
+    console.log(`Server running on http://localhost:${info.port}`);
+  });
+}
+
+main()
 
 export default app;
