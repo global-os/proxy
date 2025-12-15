@@ -23,6 +23,7 @@
     "@types/node": "^25.0.1",
     "@types/pg": "^8.16.0",
     "drizzle-kit": "^0.31.8",
+    "jsdom": "^27.3.0",
     "typescript": "^5.9.3"
   }
 }
