@@ -8,5 +8,6 @@ export type Env = {
     db: NodePgDatabase<typeof schema> & { $client: Pool; };
     cookies: Record<string, string>;
     targetHost: string;
+    isLocal: boolean;
   }
 };

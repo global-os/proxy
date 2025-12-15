@@ -46,8 +46,10 @@ export const selectTargetHost: MiddlewareHandler<Env> = async (c, next) => {
     targetHost = rows[0].cleartext;
   }
 
+  c.set('isLocal', false);
   if (url.host === 'localhost' || url.host.startsWith('localhost:')) {
     targetHost = 'news.ycombinator.com';
+    c.set('isLocal', true);
   }
 
   console.log('host is', url.host);

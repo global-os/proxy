@@ -104,7 +104,7 @@ app.all('*', async (c) => {
     // If you have a Response object
     if (response.body) {
       const text = await response.text();
-      const transformed = replaceDomainInHTML(text, targetHost, host);
+      const transformed = replaceDomainInHTML(text, targetHost, host, c.get('isLocal'));
 
       // Create new response with transformed body
       nextResponse = new Response(transformed, {

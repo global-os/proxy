@@ -3,7 +3,8 @@ const { JSDOM } = require('jsdom');
 export const replaceDomainInHTML = (
     html: string,
     oldDomain: string,
-    newDomain: string
+    newDomain: string,
+    isLocal: boolean
 ): string => {
     try {
         // JSDOM handles malformed HTML gracefully
@@ -14,7 +15,7 @@ export const replaceDomainInHTML = (
 
         const doc = dom.window.document;
 
-        const replaceURL = makeReplaceURL(oldDomain, newDomain);
+        const replaceURL = makeReplaceURL(oldDomain, newDomain, isLocal);
 
         // Replace in <a> tags
         doc.querySelectorAll('a[href]').forEach((el: HTMLAnchorElement) => {
@@ -101,7 +102,7 @@ export const replaceDomainInHTML = (
 }
 
 // Helper function to replace domain in URL
-const makeReplaceURL = (oldDomain: string, newDomain: string) => (url: string): string => {
+const makeReplaceURL = (oldDomain: string, newDomain: string, isLocal: boolean) => (url: string): string => {
     if (!url) return url;
 
     try {
@@ -122,11 +123,16 @@ const makeReplaceURL = (oldDomain: string, newDomain: string) => (url: string): 
             urlObj = new URL(url);
         }
 
-        console.log('old urlobj.hostname', urlObj.hostname, 'vs', oldDomain, '->', newDomain)
+        console.log('old urlobj.hostname', urlObj.host, 'vs', oldDomain, '->', newDomain)
 
         // Replace hostname if it matches (preserves original protocol)
-        if (urlObj.hostname.toLowerCase() === oldDomain.toLowerCase()) {
-            urlObj = new URL({...urlObj, hostname: newDomain});
+        if (urlObj.host.toLowerCase() === oldDomain.toLowerCase()) {
+            urlObj.host = newDomain;
+            console.log('set it', urlObj)
+        }
+
+        if (isLocal) {
+            urlObj.protocol = 'http'
         }
 
         console.log('result', urlObj)
