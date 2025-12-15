@@ -6,6 +6,7 @@ import * as schema from './db/schema';
 import * as middleware from './middleware'
 import { eq } from 'drizzle-orm';
 import { Env } from './types';
+import { replaceDomainInHTML } from './replace';
 
 const app = new Hono<Env>();
 
@@ -69,19 +70,17 @@ app.all('*', async (c) => {
 
     if (hasBody) {
       // Read the body as an ArrayBuffer instead of streaming
-      console.log(await c.req.text());
       const bodyData = await c.req.arrayBuffer();
-      console.log('i have body ', bodyData.toString())
+
+      const replacedBody = replaceDomainInHTML(targetHost, host, bodyData.toString())
+
       if (bodyData.byteLength > 0) {
-        fetchOptions.body = bodyData;
+        const encoder = new TextEncoder();
+        fetchOptions.body = encoder.encode(replacedBody).buffer;
       }
     }
 
-    console.log('fetch ' + c.req.method + ' response:');
-
     const response = await fetch(targetUrl, fetchOptions);
-
-    console.log(response.headers);
 
     // Node's fetch automatically decompresses, so remove encoding headers
     const responseHeaders = new Headers(response.headers);
@@ -104,7 +103,6 @@ app.all('*', async (c) => {
       statusText: response.statusText,
       headers: responseHeaders,
     };
-    console.log(init);
 
     return new Response(response.body, init);
   } catch (error) {
