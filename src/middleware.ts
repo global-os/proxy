@@ -31,6 +31,7 @@ export const parseCookies: MiddlewareHandler<Env> = async (c, next) => {
 export const selectTargetHost: MiddlewareHandler<Env> = async (c, next) => {
   const cookies = c.get('cookies');
 
+  console.log('parsing1', c.req.url);
   const url = new URL(c.req.url);
   const initialPart = url.host.split('.')[0];
   const db = c.get('db');
@@ -45,6 +46,12 @@ export const selectTargetHost: MiddlewareHandler<Env> = async (c, next) => {
     targetHost = rows[0].cleartext;
   }
 
+  if (url.host === 'localhost' || url.host.startsWith('localhost:')) {
+    targetHost = 'news.ycombinator.com';
+  }
+
+  console.log('host is', url.host);
+  console.log('setting targethost to ', targetHost);
   c.set('targetHost', targetHost);
   await next();
 };

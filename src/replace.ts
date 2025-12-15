@@ -18,6 +18,7 @@ export const replaceDomainInHTML = (
 
         // Replace in <a> tags
         doc.querySelectorAll('a[href]').forEach((el: HTMLAnchorElement) => {
+            console.log('replacing LINK', oldDomain, 'with', newDomain, 'text', el.outerHTML);
             el.href = replaceURL(el.href);
         });
 
@@ -113,16 +114,22 @@ const makeReplaceURL = (oldDomain: string, newDomain: string) => (url: string): 
         let urlObj;
         if (!url.startsWith('http://') && !url.startsWith('https://')) {
             // Try with https first as fallback base
+            console.log('parsing3', url);
             urlObj = new URL(url, `https://${oldDomain}`);
         } else {
             // Parse absolute URLs directly
+            console.log('parsing4', url);
             urlObj = new URL(url);
         }
 
+        console.log('old urlobj.hostname', urlObj.hostname, 'vs', oldDomain, '->', newDomain)
+
         // Replace hostname if it matches (preserves original protocol)
         if (urlObj.hostname.toLowerCase() === oldDomain.toLowerCase()) {
-            urlObj.hostname = newDomain;
+            urlObj = new URL({...urlObj, hostname: newDomain});
         }
+
+        console.log('result', urlObj)
         return urlObj.toString();
     } catch (e) {
         // If URL parsing fails, try simple string replacement

@@ -20,19 +20,13 @@ app.use(
 
 app.all('*', async (c) => {
   const targetHost = c.get('targetHost');
+  console.log('parsing2', c.req.url);
   const url = new URL(c.req.url);
   const host = url.host;
 
   const targetUrl = `https://${targetHost}${url.pathname}${url.search}`;
 
   const db = c.get('db');
-
-  const userDomains = await db
-    .select()
-    .from(schema.domains)
-    .where(eq(schema.domains.user_id, 123));
-
-  console.log('user domains', userDomains)
 
   try {
     // Build clean headers
@@ -68,15 +62,14 @@ app.all('*', async (c) => {
       redirect: 'manual',
     };
 
+    console.log('has body?', hasBody)
+
     if (hasBody) {
       // Read the body as an ArrayBuffer instead of streaming
       const bodyData = await c.req.arrayBuffer();
 
-      const replacedBody = replaceDomainInHTML(targetHost, host, bodyData.toString())
-
       if (bodyData.byteLength > 0) {
-        const encoder = new TextEncoder();
-        fetchOptions.body = encoder.encode(replacedBody).buffer;
+        fetchOptions.body = bodyData;
       }
     }
 
@@ -98,13 +91,28 @@ app.all('*', async (c) => {
 
     console.log('Set-Cookie headers:', response.headers.getSetCookie?.() || 'none');
 
+
     const init = {
       status: response.status,
       statusText: response.statusText,
       headers: responseHeaders,
     };
 
-    return new Response(response.body, init);
+
+    let nextResponse =  new Response(response.body, init);
+
+    // If you have a Response object
+    if (response.body) {
+      const text = await response.text();
+      const transformed = replaceDomainInHTML(text, targetHost, host);
+
+      // Create new response with transformed body
+      nextResponse = new Response(transformed, {
+        ...init,
+      });
+    }
+
+    return nextResponse;
   } catch (error) {
     console.error('Proxy error:', error);
     return c.text('Proxy error occurred', 500);
