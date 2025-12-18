@@ -6,30 +6,16 @@ import { testConnection } from './db'
 import * as middleware from './middleware'
 import { Env } from './types'
 import { replaceDomainInHTML } from './replace'
+import { pathFromHostnameAndPath } from './utils'
 
 const app = new Hono<Env>({
   getPath(request, options) {
     const path = getPath(request)
     const { hostname } = new URL(request.url)
 
-    if (/^localhost(:\d+)?$/.test(hostname)) {
-      return path
-    }
-
-    const matches = hostname.match(/^([a-z0-9])+(\.dev)?\.app\.onetrueos\.com$/)
-    if (matches) {
-      if (matches[1] === 'app') {
-        return '/app/' + path
-      }
-      return '/instance/' + matches[1] + '/' + path
-    } else {
-      const matches = hostname.match(/^(dev\.)?app\.onetrueos\.com$/)
-      if (matches) {
-        return '/app/' + path
-      }
-    }
-
-    throw new Error('unrecognized domain')
+    const x = pathFromHostnameAndPath(hostname, path)
+    console.log('app x', x)
+    return x
   },
 })
 

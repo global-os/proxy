@@ -3,6 +3,7 @@ import { db } from './db'
 import { Env } from './types'
 import * as schema from './db/schema'
 import { eq } from 'drizzle-orm'
+import { pathFromHostnameAndPath } from './utils'
 
 export const provideDb: MiddlewareHandler<Env> = async (c, next) => {
   c.set('db', db)
@@ -31,10 +32,12 @@ export const parseCookies: MiddlewareHandler<Env> = async (c, next) => {
 export const selectTargetHost: MiddlewareHandler<Env> = async (c, next) => {
   const cookies = c.get('cookies')
 
-  console.log('parsing1', c.req.url)
   const url = new URL(c.req.url)
   const initialPart = url.host.split('.')[0]
   const db = c.get('db')
+
+  // const newPath = pathFromHostnameAndPath(url.hostname, c.req.path)
+  // console.log('requested path is', newPath)
 
   const rows = await db
     .select()
