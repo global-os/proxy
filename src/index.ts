@@ -11,21 +11,38 @@ const app = new Hono<Env>({
   getPath(request, options) {
     const path = getPath(request)
     const { hostname } = new URL(request.url)
-    if (hostname)
-      const prefix = hostname.includes('.') ? `/${hostname.split('.')[0]}` : ''
-    return `${prefix}${path}`
+
+    if (/^localhost(:\d+)?$/.test(hostname)) {
+      return path
+    }
+
+    const matches = hostname.match(/^([a-z0-9])+(\.dev)?\.onetrueos\.com$/)
+    if (matches) {
+      return '/instance/' + matches[1]
+    } else {
+      const matches = hostname.match(/^app?\.onetrueos\.com$/)
+      if (matches) {
+        return '/app'
+      }
+    }
+
+    throw new Error('unrecognized domain')
   },
 })
 
 app.use(
-  '*',
+  '/instance/*',
   middleware.provideDb,
   middleware.parseCookies,
   middleware.selectTargetHost,
   middleware.logRequest
 )
 
-app.all('*', async (c) => {
+app.get('/app', async (c) => {
+  return new Response('foob ar')
+})
+
+app.all('/instance/*', async (c) => {
   const targetHost = c.get('targetHost')
   const url = new URL(c.req.url)
   const host = url.host
