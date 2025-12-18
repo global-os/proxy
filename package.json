@@ -10,7 +10,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "start": "node dist/src/index.js",
-    "dev": "ts-node src/index.ts"
+    "dev": "ts-node src/index.ts",
+    "format": "prettier -w **/*.ts *.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.1",
@@ -25,6 +26,7 @@
     "@types/pg": "^8.16.0",
     "drizzle-kit": "^0.31.8",
     "jsdom": "^27.3.0",
+    "prettier": "^3.7.4",
     "typescript": "^5.9.3"
   }
 }
