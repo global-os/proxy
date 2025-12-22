@@ -8,6 +8,8 @@ import * as middleware from './middleware'
 import { Env } from './types'
 import { replaceDomainInHTML } from './replace'
 import { pathFromHostnameAndPath } from './utils'
+import authRoutes from './routes/auth'
+import { useState } from 'hono/jsx'
 
 const app = new Hono<Env>({
   getPath(request, options) {
@@ -28,16 +30,27 @@ app.use(
   middleware.logRequest
 )
 
+app.basePath("/app/auth").route("/", authRoutes);
 
 app.get('/app/*', async (c) => {
   return c.html(
     <html>
       <body>
         <h1>Hello {c.req.query('name')}</h1>
+        <Foo />
       </body>
     </html>
   )
 })
+
+const Foo = () => {
+  const [a, setA] = useState("foo");
+  return <div>
+    {a}
+    <button onClick={() => {setA("bar")}}>check</button>
+  </div>
+
+}
 
 app.all('/instance/*', async (c) => {
   const targetHost = c.get('targetHost')

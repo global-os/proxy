@@ -1,13 +1,11 @@
 import { betterAuth } from 'better-auth'
-import { prismaAdapter } from 'better-auth/adapters/prisma'
-
-import prisma from './db/index'
-import env from './env'
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { db } from './db';
 
 export const auth = betterAuth({
-  database: prismaAdapter(prisma, {
-    provider: 'postgresql',
-  }),
+  database: drizzleAdapter(db, {
+    provider: "pg",
+  }), 
   // Allow requests from the frontend development server
   trustedOrigins: ['http://localhost:5173'],
   emailAndPassword: {
@@ -15,12 +13,12 @@ export const auth = betterAuth({
   },
   socialProviders: {
     github: {
-      clientId: env.GITHUB_CLIENT_ID,
-      clientSecret: env.GITHUB_CLIENT_SECRET,
+      clientId: process.env.GITHUB_CLIENT_ID ?? '',
+      clientSecret: process.env.GITHUB_CLIENT_SECRET,
     },
     google: {
-      clientId: env.GOOGLE_CLIENT_ID,
-      clientSecret: env.GOOGLE_CLIENT_SECRET,
+      clientId: process.env.GOOGLE_CLIENT_ID ?? '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     },
   },
 })
