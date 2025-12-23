@@ -3,6 +3,9 @@
     "outDir": "dist",
     "jsxImportSource": "hono/jsx",
     "jsx": "react-jsx",
+    "excludeDirectories": [
+      "src/frontend"
+    ],
 
     "incremental": true,
     "target": "es6",
