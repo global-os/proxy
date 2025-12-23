@@ -2,15 +2,14 @@
   "name": "nodeproxy-backend",
   "workspaces": ["frontend"],
   "scripts": {
-    "dev": "bun --watch src/index.tsx",
-    "dev:frontend": "bun --cwd src/frontend dev",
-    "dev:all": "bun dev & bun dev:frontend",
+    "dev:backend": "ts-node src/index.tsx",
+    "dev:frontend": "cd src/frontend; npm run-script dev",
 
     "build:backend": "tsc",
     "build:frontend": "bun --cwd src/frontend build",
     "build": "bun run build:frontend && bun run build:backend",
 
-    "start": "bun src/index.ts",
+    "start": "node dist/src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "format": "prettier -w **/*.ts *.ts **/*.tsx *.tsx"
   },
