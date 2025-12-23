@@ -1,18 +1,24 @@
 {
-  "name": "nodeproxy",
+  "name": "nodeproxy-backend",
+  "workspaces": ["frontend"],
+  "scripts": {
+    "dev": "bun --watch src/index.tsx",
+    "dev:frontend": "bun --cwd src/frontend dev",
+    "dev:all": "bun dev & bun dev:frontend",
+
+    "build:backend": "tsc",
+    "build:frontend": "bun --cwd src/frontend build",
+
+    "start": "bun src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "format": "prettier -w **/*.ts *.ts **/*.tsx *.tsx"
+  },
   "version": "1.0.0",
   "description": "",
   "license": "UNLICENSED",
   "author": "",
   "type": "commonjs",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc",
-    "start": "node dist/src/index.js",
-    "dev": "ts-node src/index.tsx",
-    "format": "prettier -w **/*.ts *.ts **/*.tsx *.tsx"
-  },
   "dependencies": {
     "better-auth": "^1.4.7",
     "bunx": "^0.1.0",
