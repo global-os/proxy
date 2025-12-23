@@ -1,4 +1,4 @@
-import dotenv from 'dotenv';
+import dotenv from 'dotenv'
 
 import fs from 'fs'
 import { Hono } from 'hono'
@@ -15,7 +15,7 @@ import { replaceDomainInHTML } from './replace'
 import { pathFromHostnameAndPath } from './utils'
 import authRoutes from './routes/auth'
 
-dotenv.config(); // Loads .env from root
+dotenv.config() // Loads .env from root
 
 const app = new Hono<Env>({
   getPath(request, options) {
@@ -34,22 +34,32 @@ app.use(
   middleware.logRequest
 )
 
-app.basePath("/app/auth").route("/", authRoutes);
+app.basePath('/app/auth').route('/', authRoutes)
 
-app.use('/static/*', serveStatic({ 
-  root: path.join(process.cwd(), 'src/frontend/dist'),
-  rewriteRequestPath: (path) => path.replace(/^\/static/, '')
-}))
+app.use(
+  '/static/*',
+  serveStatic({
+    root: path.join(process.cwd(), 'src/frontend/dist'),
+    rewriteRequestPath: (path) => path.replace(/^\/static/, ''),
+  })
+)
 
 app.get('/app/*', async (c) => {
-  const fullPath = path.join(process.cwd(), "src/frontend/dist/.vite/manifest.json");
-  const manifest = JSON.parse(fs.readFileSync(fullPath, 'utf-8'));
+  const fullPath = path.join(
+    process.cwd(),
+    'src/frontend/dist/.vite/manifest.json'
+  )
+  const manifest = JSON.parse(fs.readFileSync(fullPath, 'utf-8'))
   const indexJs = manifest['index.html'].file
 
   return c.html(
     <html>
       <head>
-        <script type="module" crossorigin="" src={'/static/' + indexJs}></script>
+        <script
+          type="module"
+          crossorigin=""
+          src={'/static/' + indexJs}
+        ></script>
       </head>
       <body>
         <h1>Hello {c.req.query('name')}</h1>

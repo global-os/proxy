@@ -1,11 +1,11 @@
 import { betterAuth } from 'better-auth'
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { db } from './db';
+import { drizzleAdapter } from 'better-auth/adapters/drizzle'
+import { db } from './db'
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
-    provider: "pg",
-  }), 
+    provider: 'pg',
+  }),
   // Allow requests from the frontend development server
   trustedOrigins: ['http://localhost:5173'],
   emailAndPassword: {
