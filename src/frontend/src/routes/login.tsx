@@ -1,63 +1,63 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { signIn } from "../lib/auth-client";
-import { useState } from "react";
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { signIn } from '../lib/auth-client'
+import { useState } from 'react'
 
-export const Route = createFileRoute("/login")({
+export const Route = createFileRoute('/login')({
   component: RouteComponent,
-});
+})
 
 function RouteComponent() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const navigate = useNavigate();
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const navigate = useNavigate()
 
   const handleEmailLogin = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+    e.preventDefault()
 
     await signIn.email(
       { email, password },
       {
         onSuccess: () => {
-          navigate({ to: "/" });
+          navigate({ to: '/' })
         },
         onError: (error) => {
-          console.error(error);
+          console.error(error)
         },
       }
-    );
-  };
+    )
+  }
 
   const handleGoogleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+    e.preventDefault()
 
     await signIn.social(
-      { provider: "google" },
+      { provider: 'google' },
       {
         onSuccess: () => {
-          navigate({ to: "/" });
+          navigate({ to: '/' })
         },
         onError: (error) => {
-          console.error(error);
+          console.error(error)
         },
       }
-    );
-  };
+    )
+  }
 
   const handleGithubLogin = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+    e.preventDefault()
 
     await signIn.social(
-      { provider: "github" },
+      { provider: 'github' },
       {
         onSuccess: () => {
-          navigate({ to: "/" });
+          navigate({ to: '/' })
         },
         onError: (error) => {
-          console.error(error);
+          console.error(error)
         },
       }
-    );
-  };
+    )
+  }
 
   return (
     <div>
@@ -84,5 +84,5 @@ function RouteComponent() {
         <button type="submit">Login with Github</button>
       </form>
     </div>
-  );
+  )
 }

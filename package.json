@@ -11,7 +11,7 @@
     "build": "npm run-script build:frontend && npm run-script build:backend",
     "start": "node dist/src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "format": "prettier -w **/*.ts *.ts **/*.tsx *.tsx"
+    "format": "prettier -w **/*.{ts,tsx}"
   },
   "version": "1.0.0",
   "description": "",

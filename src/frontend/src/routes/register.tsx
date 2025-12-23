@@ -1,39 +1,39 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { signUp } from "../lib/auth-client";
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useState } from 'react'
+import { signUp } from '../lib/auth-client'
 
-export const Route = createFileRoute("/register")({
+export const Route = createFileRoute('/register')({
   component: RouteComponent,
-});
+})
 
 function RouteComponent() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
 
-  const [name, setName] = useState("");
-  const navigate = useNavigate();
+  const [name, setName] = useState('')
+  const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+    e.preventDefault()
 
     if (password !== confirmPassword) {
-      alert("Passwords do not match");
-      return;
+      alert('Passwords do not match')
+      return
     }
 
     await signUp.email(
-      { email, password, name, roles: ["STUDENT"] },
+      { email, password, name, roles: ['STUDENT'] },
       {
         onSuccess: () => {
-          navigate({ to: "/" });
+          navigate({ to: '/' })
         },
         onError: (error) => {
-          console.error(error);
+          console.error(error)
         },
       }
-    );
-  };
+    )
+  }
 
   return (
     <div>
@@ -66,5 +66,5 @@ function RouteComponent() {
         <button type="submit">Register</button>
       </form>
     </div>
-  );
+  )
 }
