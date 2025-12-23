@@ -1,6 +1,10 @@
 import dotenv from 'dotenv';
 
+import fs from 'fs'
 import { Hono } from 'hono'
+import { useState } from 'hono/jsx'
+import path from 'path'
+import { serveStatic } from '@hono/node-server/serve-static'
 import { getPath } from 'hono/utils/url'
 import { serve } from '@hono/node-server'
 
@@ -10,19 +14,15 @@ import { Env } from './types'
 import { replaceDomainInHTML } from './replace'
 import { pathFromHostnameAndPath } from './utils'
 import authRoutes from './routes/auth'
-import { useState } from 'hono/jsx'
 
 dotenv.config(); // Loads .env from root
-
 
 const app = new Hono<Env>({
   getPath(request, options) {
     const path = getPath(request)
     const { hostname } = new URL(request.url)
 
-    const x = pathFromHostnameAndPath(hostname, path)
-    console.log('app x', x)
-    return x
+    return pathFromHostnameAndPath(hostname, path)
   },
 })
 
@@ -36,25 +36,28 @@ app.use(
 
 app.basePath("/app/auth").route("/", authRoutes);
 
+app.use('/static/*', serveStatic({ 
+  root: path.join(process.cwd(), 'src/frontend/dist'),
+  rewriteRequestPath: (path) => path.replace(/^\/static/, '')
+}))
+
 app.get('/app/*', async (c) => {
+  const fullPath = path.join(process.cwd(), "src/frontend/dist/.vite/manifest.json");
+  const manifest = JSON.parse(fs.readFileSync(fullPath, 'utf-8'));
+  const indexJs = manifest['index.html'].file
+
   return c.html(
     <html>
+      <head>
+        <script type="module" crossorigin="" src={'/static/' + indexJs}></script>
+      </head>
       <body>
         <h1>Hello {c.req.query('name')}</h1>
-        <Foo />
+        <div id="root"></div>
       </body>
     </html>
   )
 })
-
-const Foo = () => {
-  const [a, setA] = useState("foo");
-  return <div>
-    {a}
-    <button onClick={() => {setA("bar")}}>check</button>
-  </div>
-
-}
 
 app.all('/instance/*', async (c) => {
   const targetHost = c.get('targetHost')
