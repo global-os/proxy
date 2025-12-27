@@ -13,7 +13,11 @@ export const auth = betterAuth({
     provider: 'pg',
   }),
   // Allow requests from the frontend development server
-  trustedOrigins: ['http://localhost:5173'],
+  trustedOrigins: [
+    'http://localhost:5173',
+    'app.onetrueos.com',
+    'app.app.onetrueos.com'
+  ],
   emailAndPassword: {
     enabled: true,
   },
