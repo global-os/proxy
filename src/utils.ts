@@ -16,6 +16,9 @@ export const pathFromHostnameAndPath = (
   )
   if (matches) {
     if (matches[1] === 'app') {
+      if (path.startsWith('/static/')) {
+        return path
+      }
       return '/app/' + path
     }
     return '/instance/' + matches[1] + path
