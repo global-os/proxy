@@ -7,6 +7,7 @@ export const replaceDomainInHTML = (
   isLocal: boolean
 ): string => {
   try {
+    console.log('about to parse', html)
     // JSDOM handles malformed HTML gracefully
     const dom = new JSDOM(html, {
       includeNodeLocations: false,
