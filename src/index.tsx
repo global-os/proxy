@@ -19,8 +19,8 @@ dotenv.config() // Loads .env from root
 
 const app = new Hono<Env>({
   getPath(request, options) {
-    const path = getPath(request)
     console.log('parsing3333,', request.url)
+    const path = getPath(request)
     const { hostname } = new URL(request.url)
 
     return pathFromHostnameAndPath(hostname, path)
@@ -37,15 +37,16 @@ app.use(
 
 app.basePath('/app/auth').route('/', authRoutes)
 
-app.use(
-  '/static/*',
-  serveStatic({
-    root: path.join(process.cwd(), 'src/frontend/dist'),
-    rewriteRequestPath: (path) => path.replace(/^\/static/, ''),
-  })
-)
+// app.use(
+//   '/static/*',
+//   serveStatic({
+//     root: path.join(process.cwd(), 'src/frontend/dist'),
+//     rewriteRequestPath: (path) => path.replace(/^\/static/, ''),
+//   })
+// )
 
 app.get('/app/*', async (c) => {
+  console.log('aaaaaa');
   const fullPath = path.join(
     process.cwd(),
     'src/frontend/dist/.vite/manifest.json'
@@ -71,6 +72,7 @@ app.get('/app/*', async (c) => {
 })
 
 app.all('/instance/*', async (c) => {
+  console.log('aaaaaabbbbbb');
   const targetHost = c.get('targetHost')
   console.log('parsing2222,', c.req.url)
   const url = new URL(c.req.url)
