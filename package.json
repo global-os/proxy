@@ -1,11 +1,14 @@
 {
   "name": "nodeproxy-backend",
   "workspaces": [
+    "frontend"
   ],
   "scripts": {
     "dev:backend": "ts-node src/index.tsx",
+    "dev:frontend": "cd src/frontend; npm run-script dev",
     "build:backend": "tsc",
-    "build": "npm run-script build:backend",
+    "build:frontend": "cd src/frontend; npm run-script build",
+    "build": "npm run-script build:frontend && npm run-script build:backend",
     "start": "node dist/src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "format": "prettier -w **/*.{ts,tsx} ./drizzle.config.ts"
