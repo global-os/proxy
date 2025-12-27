@@ -1,7 +1,7 @@
 import { MiddlewareHandler } from 'hono'
-import { db } from './db/index'
+import { db } from './db/index.js'
 import { Env } from './types'
-import * as schema from './db/schema'
+import * as schema from './db/schema.js'
 import { eq } from 'drizzle-orm'
 import { pathFromHostnameAndPath } from './utils'
 

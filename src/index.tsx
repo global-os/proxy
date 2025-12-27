@@ -8,12 +8,12 @@ import { serveStatic } from '@hono/node-server/serve-static'
 import { getPath } from 'hono/utils/url'
 import { serve } from '@hono/node-server'
 
-import { testConnection } from './db/index'
-import * as middleware from './middleware'
+import { testConnection } from './db/index.js'
+import * as middleware from './middleware.js'
 import { Env } from './types'
-import { replaceDomainInHTML } from './replace'
-import { pathFromHostnameAndPath } from './utils'
-import authRoutes from './routes/auth'
+import { replaceDomainInHTML } from './replace.js'
+import { pathFromHostnameAndPath } from './utils.js'
+import authRoutes from './routes/auth.js'
 
 dotenv.config() // Loads .env from root
 
