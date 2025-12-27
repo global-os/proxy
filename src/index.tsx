@@ -23,7 +23,9 @@ const app = new Hono<Env>({
     const path = getPath(request)
     const { hostname } = new URL(request.url)
 
-    return pathFromHostnameAndPath(hostname, path)
+    const resolved = pathFromHostnameAndPath(hostname, path)
+    console.log('resolved to', resolved)
+    return resolved
   },
 })
 

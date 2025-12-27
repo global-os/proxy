@@ -3,6 +3,10 @@ const hostsToRegex = (hostPatterns: string[]): RegExp => {
   return new RegExp(combinedRegex)
 }
 
+const removeLeadingSlash = (path: string): string => {
+  return path.replace(/^\/+/, '')
+}
+
 export const pathFromHostnameAndPath = (
   hostname: string,
   path: string
@@ -16,21 +20,19 @@ export const pathFromHostnameAndPath = (
     /^((?:[a-z0-9])+)\.app(?:\.dev)?\.onetrueos\.com$/
   )
   if (matches) {
-    console.log('matches!')
-    if (matches[1] === 'app') {
+    const subdomain = matches[1]
+    if (subdomain === 'app') {
       console.log('matches app!')
       if (path.startsWith('/static/')) {
         return path
       }
-      return '/app/' + path
+      return '/app/' + removeLeadingSlash(path)
     }
-    return '/instance/' + matches[1] + path
+    return '/instance/' + subdomain + '/' + removeLeadingSlash(path)
   } else {
-    console.log('does not matches!')
     const matches = hostname.match(/^app\.(?:dev\.)?onetrueos\.com$/)
     if (matches) {
-      console.log('does not matches regex!')
-      return '/app' + path
+      return '/app/' + removeLeadingSlash(path)
     }
   }
 
