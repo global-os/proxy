@@ -15,6 +15,7 @@
   "license": "UNLICENSED",
   "author": "",
   "main": "index.js",
+  "type": "module",
   "dependencies": {
     "better-auth": "^1.4.7",
     "bunx": "^0.1.0",
