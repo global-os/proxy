@@ -10,7 +10,7 @@ function Index() {
   return (
     <div className="p-2">
       <h3>Welcome Home!</h3>
-      {session && <div>Hello {session.user.name}</div>}
+      {session && <div>Hello {session.user?.name ?? `${session.user}`}</div>}
     </div>
   )
 }
