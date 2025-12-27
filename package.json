@@ -17,7 +17,6 @@
   "description": "",
   "license": "UNLICENSED",
   "author": "",
-  "type": "module",
   "main": "index.js",
   "dependencies": {
     "better-auth": "^1.4.7",
