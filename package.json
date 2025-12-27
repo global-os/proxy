@@ -26,9 +26,7 @@
     "fp-ts": "^2.16.11",
     "hono": "^4.10.8",
     "kysely": "^0.28.9",
-    "pg": "^8.16.3"
-  },
-  "devDependencies": {
+    "pg": "^8.16.3",
     "@hono/node-server": "^1.19.7",
     "@types/node": "^25.0.1",
     "@types/pg": "^8.16.0",
