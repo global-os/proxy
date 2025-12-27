@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, index, serial, integer } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -91,3 +91,10 @@ export const accountRelations = relations(account, ({ one }) => ({
     references: [user.id],
   }),
 }));
+
+export const domains = pgTable('domains', {
+  domain_id: serial('domain_id').primaryKey(),
+  domain_slug: text('domain_slug').notNull(),
+  user_id: integer('user_id').notNull().references(() => user.id),
+  cleartext: text('cleartext').notNull(),
+});
