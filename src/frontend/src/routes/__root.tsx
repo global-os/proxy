@@ -6,23 +6,27 @@ export const Route = createRootRoute({
   component: RouteComponent,
 })
 
+const getUrl = (path: string): string => {
+  return path
+}
+
 function RouteComponent() {
   const { data: session } = useSession()
 
   return (
     <>
       <div className="p-2 flex">
-        <Link to="/" className="[&.active]:font-bold">
+        <Link to={getUrl('/')} className="[&.active]:font-bold">
           Home
         </Link>{' '}
         {session ? (
           <button onClick={() => signOut()}>Sign Out</button>
         ) : (
           <>
-            <Link to="/login" className="[&.active]:font-bold">
+            <Link to={getUrl('/login')} className="[&.active]:font-bold">
               Login
             </Link>{' '}
-            <Link to="/register" className="[&.active]:font-bold">
+            <Link to={getUrl('/register')} className="[&.active]:font-bold">
               Register
             </Link>
           </>

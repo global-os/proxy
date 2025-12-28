@@ -2,13 +2,8 @@ import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { db } from './db/index.js'
 
-const isLocalhost = () => {
-  return process.env.IS_LOCALHOST === 'true'
-}
-
-console.log('db url is', process.env.DATABASE_URL)
 export const auth = betterAuth({
-  basePath: isLocalhost() ? '/app/auth' : '/auth',
+  basePath: '/auth',
   database: drizzleAdapter(db, {
     provider: 'pg',
   }),

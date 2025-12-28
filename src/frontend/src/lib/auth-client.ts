@@ -1,12 +1,8 @@
 import { createAuthClient } from 'better-auth/react'
 import { inferAdditionalFields } from 'better-auth/client/plugins'
 
-const isLocalhost = () => {
-  return window.location.hostname === 'localhost'
-}
-
 export const authClient = createAuthClient({
-  basePath: isLocalhost() ? '/app/auth' : '/auth',
+  basePath: '/auth',
   plugins: [
     inferAdditionalFields({
       user: {

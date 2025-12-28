@@ -56,7 +56,13 @@ app.get('/app/*', async (c) => {
     'src/frontend/dist/.vite/manifest.json'
   )
   const manifest = JSON.parse(fs.readFileSync(fullPath, 'utf-8'))
-  const indexJs = manifest['index.html'].file
+
+  const indexHtml = manifest['index.html']
+  const indexJs = indexHtml.file
+  const css = indexHtml.css
+
+  // const css = manifest['index.html']
+  // "/${mainEntry.css[0]}"
 
   return c.html(
     <html>
@@ -66,6 +72,9 @@ app.get('/app/*', async (c) => {
           crossorigin=""
           src={'/static/' + indexJs}
         ></script>
+        {css.map((cssFile: string) => {
+          return <link rel="stylesheet" href={'/static/' + cssFile} />
+        })}
       </head>
       <body>
         <h1>Hello {c.req.query('name')}</h1>
