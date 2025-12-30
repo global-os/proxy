@@ -40,24 +40,24 @@ function Index() {
   )
 }
 
-function MyApp() {
-  const { data: session, isPending, error } = useSession()
+// function MyApp() {
+//   const { data: session, isPending, error } = useSession()
 
-  if (isPending) {
-    return <div>loading...</div>
-  }
+//   if (isPending) {
+//     return <div>loading...</div>
+//   }
 
-  if (error) {
-    return <div>ERROR: {`${error}`}</div>
-  }
+//   if (error) {
+//     return <div>ERROR: {`${error}`}</div>
+//   }
 
-  return (
-    <div>
-      <Button native={false}>Let's go</Button>
+//   return (
+//     <div>
+//       <Button native={false}>Let's go</Button>
 
-      <h3>Welcome Home!</h3>
+//       <h3>Welcome Home!</h3>
 
-      {session && <div>Hello {session.user?.name ?? `${session.user}`}</div>}
-    </div>
-  )
-}
+//       {session && <div>Hello {session.user?.name ?? `${session.user}`}</div>}
+//     </div>
+//   )
+// }
