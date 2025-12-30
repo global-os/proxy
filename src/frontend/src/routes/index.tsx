@@ -1,11 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useSession } from '../lib/auth-client'
 import { Button } from '@base-ui/react/button';
-import { RendererProvider, createComponent } from 'react-fela'
+import { createComponent } from 'react-fela'
+import { Page } from '../components/Page';
 
-import createRenderer from '../lib/renderer'
+import { Link } from '@tanstack/react-router'
 
-const renderer = createRenderer()
 
 export const Route = createFileRoute('/')({
   component: Index,
@@ -16,25 +16,27 @@ const section = () => ({
   fontSize: '1rem',
   display: 'block',
   width: '30.5rem',
-  height: '30.5rem',
-  background: 'blue'
+  height: '15.5rem',
+  background: 'red'
 })
 
 const LoginBox = createComponent(section)
 
-
 function Index() {
   return (
-    <html>
-      <body>
-        <RendererProvider renderer={renderer}>
-          <MyApp />
-          <LoginBox>
-            Hello styles
-          </LoginBox>
-        </RendererProvider>
-      </body>
-    </html>
+    <Page>
+
+      <LoginBox>
+        <Link to={'/login'}>
+          Login
+        </Link>{' '}
+        <Link to={'/register'}>
+          Register
+        </Link>
+      </LoginBox>
+      <hr />
+
+    </Page>
   )
 }
 

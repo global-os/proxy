@@ -6,7 +6,6 @@ import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { routeTree } from './routeTree.gen'
 
 import './index.css';
-console.log('main.tsx loaded') 
 
 const router = createRouter({ routeTree })
 
@@ -17,7 +16,7 @@ declare module '@tanstack/react-router' {
 }
 
 // Render the app
-const rootElement = document.getElementById('root')!
+const rootElement = document.body
 const root = ReactDOM.createRoot(rootElement)
 root.render(
   <StrictMode>

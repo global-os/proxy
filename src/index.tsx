@@ -74,8 +74,6 @@ app.get('/app/*', async (c) => {
         })}
       </head>
       <body>
-        <h1>Hello {c.req.query('name')}</h1>
-        <div id="root"></div>
       </body>
     </html>
   )
