@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useSession } from '../lib/auth-client'
-import { Button } from '@base-ui/react/button';
+// import { useSession } from '../lib/auth-client'
+// import { Button } from '@base-ui/react/button';
 import { createComponent } from 'react-fela'
 import { Page } from '../components/Page';
 
