@@ -73,8 +73,7 @@ app.get('/app/*', async (c) => {
           return <link rel="stylesheet" href={'/static/' + cssFile} />
         })}
       </head>
-      <body>
-      </body>
+      <body></body>
     </html>
   )
 })

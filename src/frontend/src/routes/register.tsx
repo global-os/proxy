@@ -39,13 +39,10 @@ function RouteComponent() {
     )
   }
 
-
   return (
     <div>
       <h1>Register</h1>
-      {!!error && <div style={{color: 'red'}}>
-        Error: {error}
-      </div>}
+      {!!error && <div style={{ color: 'red' }}>Error: {error}</div>}
       <form onSubmit={handleSubmit}>
         <label htmlFor="email">Email</label>
         <input

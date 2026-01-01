@@ -1,41 +1,21 @@
 import { createFileRoute } from '@tanstack/react-router'
 // import { useSession } from '../lib/auth-client'
 // import { Button } from '@base-ui/react/button';
-import { createComponent } from 'react-fela'
-import { Page } from '../components/Page';
+import { Page } from '../components/Page'
+import { LogoBox } from '../components/LogoBox'
 
 import { Link } from '@tanstack/react-router'
-
 
 export const Route = createFileRoute('/')({
   component: Index,
 })
 
-const section = () => ({
-  margin: '0 auto',
-  fontSize: '1rem',
-  display: 'block',
-  width: '30.5rem',
-  height: '15.5rem',
-  background: 'red'
-})
-
-const LoginBox = createComponent(section)
-
 function Index() {
   return (
     <Page>
-
-      <LoginBox>
-        <Link to={'/login'}>
-          Login
-        </Link>{' '}
-        <Link to={'/register'}>
-          Register
-        </Link>
-      </LoginBox>
-      <hr />
-
+      <LogoBox>
+        <Link to={'/login'}>Login</Link> <Link to={'/register'}>Register</Link>
+      </LogoBox>
     </Page>
   )
 }
