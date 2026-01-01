@@ -5,11 +5,11 @@ import { AnimationContext } from '../contexts/animation'
 const Container = createComponent(() => ({
   position: 'relative',
 
-  '--scale': '20px',
-  '--duration': '4s',
+  '--scale': '140px',
+  '--duration': '10s',
 
   width: 'calc(var(--scale) * 2)',
-  height: 'calc(var(--scale) * 1.5)',
+  height: 'calc(var(--scale) * 5/4)',
 
   '>:nth-child(1)': {
     animationDelay: 'calc(var(--duration) * -1/3)'
@@ -25,8 +25,8 @@ const Container = createComponent(() => ({
 const FadingBox = createComponent(({ animations }: { animations: Animations }) => ({
   boxSizing: 'border-box',
 
-  backgroundColor: 'rgba(0,0,0, 0.8)',
-  border: 'calc(var(--scale) * 0.09) solid black',
+  backgroundColor: 'rgba(0,0,0, 0.6)',
+  border: 'calc(var(--scale) * 0.09) solid rgba(0,0,0, 0.3)',
   transform: 'skew(-8deg)',
   width: 'var(--scale)',
   height: 'calc(var(--scale) * 3/4)',

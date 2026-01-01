@@ -16,16 +16,14 @@ const createRenderer = () => {
 
   const fadingBoxes = (props: {}) => ({
     '0%': {
-      top: 0,
-      left: 0,
+      transform: 'translate(0,0)',
       opacity: 0,
     },
     '50%': {
       opacity: 1
     },
     '100%': {
-      left: `calc(var(--scale))`,
-      top: `calc(var(--scale) * 3/4)`,
+      transform: 'translate(100%,75%)',
       opacity: 0
     }
   })
