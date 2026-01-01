@@ -14,7 +14,7 @@ const createRenderer = () => {
     enhancers: [perf(), beautifier(), sortMediaQueryMobileFirst()],
   })
 
-  const fadingBoxes = (props: {}) => ({
+  const fadingBoxes = () => ({
     '0%': {
       transform: 'translate(0,0)',
       opacity: 0,
