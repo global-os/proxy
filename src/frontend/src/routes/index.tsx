@@ -3,6 +3,8 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Button } from '@base-ui/react/button';
 import { Page } from '../components/Page'
 import { HorizontalFrame } from '../components/HorizontalFrame'
+import { useSession } from '../lib/auth-client';
+import { useEffect } from 'react';
 
 export const Route = createFileRoute('/')({
   component: Index,
@@ -10,6 +12,17 @@ export const Route = createFileRoute('/')({
 
 function Index() {
   const navigate = useNavigate()
+
+   const { data: session, isPending, error } = useSession()
+
+   const userId = session?.user.id
+
+   useEffect(() => {
+    if (!isPending && userId !== undefined) {
+      navigate({ to: '/sessions' })
+    }
+
+   }, [isPending, userId])
 
   return (
     <Page>
@@ -29,7 +42,6 @@ function Index() {
 }
 
 // function MyApp() {
-//   const { data: session, isPending, error } = useSession()
 
 //   if (isPending) {
 //     return <div>loading...</div>
