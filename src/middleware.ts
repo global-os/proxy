@@ -42,8 +42,8 @@ export const selectTargetHost: MiddlewareHandler<Env> = async (c, next) => {
 
   const rows = await db
     .select()
-    .from(schema.domains)
-    .where(eq(schema.domains.domain_slug, initialPart))
+    .from(schema.sessionDomains)
+    .where(eq(schema.sessionDomains.slug, initialPart))
 
   let targetHost = ''
   if (rows.length === 1) {
