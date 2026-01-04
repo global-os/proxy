@@ -1,10 +1,10 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/query'
 import { VerticalFrame } from '../components/VerticalFrame'
 import { Page } from '../components/Page'
 import { PageTitle } from '../components/PageTitle'
 import { Button } from '@base-ui/react/button'
 import { signOut } from '../lib/auth-client'
+import { SessionList } from '../components/SessionList'
 
 export const Route = createFileRoute('/sessions')({
   component: RouteComponent,
