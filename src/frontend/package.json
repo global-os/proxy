@@ -10,6 +10,7 @@
     "regenerate": "npx @tanstack/router-cli generate"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.16",
     "@tanstack/react-router": "^1.115.3",
     "better-auth": "^1.2.5",
     "fela-beautifier": "^12.2.1",
