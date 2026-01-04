@@ -8,12 +8,14 @@ import { serveStatic } from '@hono/node-server/serve-static'
 import { getPath } from 'hono/utils/url'
 import { serve } from '@hono/node-server'
 
+import * as schema from './db/schema.js'
 import { testConnection } from './db/index.js'
 import * as middleware from './middleware.js'
 import { Env } from './types'
 import { replaceDomainInHTML } from './replace.js'
 import { pathFromHostnameAndPath } from './utils.js'
 import authRoutes from './routes/auth.js'
+import { eq } from 'drizzle-orm'
 
 dotenv.config() // Loads .env from root
 
@@ -40,6 +42,22 @@ app.use(
 )
 
 app.basePath('/app/api/auth').route('/', authRoutes)
+
+app.get('/app/api/sessions', async (c) => {
+  const db = c.get('db')
+  const user = c.get('user')
+
+  if (!user) {
+    return Response.json([])
+  }
+
+  const rows = await db
+    .select()
+    .from(schema.sessions)
+    .where(eq(schema.sessions.user_id, user.id))
+
+  return Response.json(rows)
+})
 
 app.use(
   '/static/*',
