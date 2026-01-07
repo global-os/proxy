@@ -9,9 +9,10 @@ const BoxContainer = createComponent(() => ({
   display: 'flex',
   flexDirection: 'row',
   justifyContent: 'center',
-}))
+}), 'div')
 
-const Box = createComponent(() => ({
+const Box = createComponent(({ width }: { width?: string }) => ({
+  width,
   border: '3px double ' + color,
   display: 'flex',
   flexDirection: 'column',
@@ -32,18 +33,23 @@ const BottomSection = createComponent(() => ({
   padding: '1em',
 }))
 
-export const VerticalFrame = ({ children }: PropsWithChildren) => {
+type Props = {
+  width: string
+}
+
+export const VerticalFrame = ({
+  children,
+  width,
+}: PropsWithChildren & Props) => {
   return (
     <BoxContainer>
-    <Box>
-      <TopSection>
-        <FadingBoxes />
-        <GlobalOsTitle>
-          GlobalOS
-        </GlobalOsTitle>
-      </TopSection>
-      <BottomSection>{children}</BottomSection>
-    </Box>
+      <Box width={width}>
+        <TopSection>
+          <FadingBoxes />
+          <GlobalOsTitle>GlobalOS</GlobalOsTitle>
+        </TopSection>
+        <BottomSection>{children}</BottomSection>
+      </Box>
     </BoxContainer>
   )
 }

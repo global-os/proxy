@@ -16,7 +16,7 @@ function RouteComponent() {
 
   return (
     <Page>
-      <VerticalFrame>
+      <VerticalFrame width="65em">
         <div>
           <PageTitle>Sessions</PageTitle>
         </div>
