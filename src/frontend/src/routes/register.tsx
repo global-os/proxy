@@ -20,6 +20,7 @@ function RouteComponent() {
   const [error, setError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    console.log('submitted')
     e.preventDefault()
 
     if (password !== confirmPassword) {
@@ -58,19 +59,19 @@ function RouteComponent() {
               />
             </div>
             <div>
+              <label htmlFor="name">Name (optional)</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+            <div>
               <label htmlFor="password">Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor="name">Name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
               />
             </div>
             <div>

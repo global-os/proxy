@@ -2,6 +2,7 @@ import { PropsWithChildren } from 'react'
 import { createComponent } from 'react-fela'
 import { FadingBoxes } from './FadingBoxes'
 import { GlobalOsTitle } from './GlobalOsTitle'
+import { LogoSection } from './LogoSection'
 
 const Box = createComponent(() => ({
   display: 'flex',
@@ -14,13 +15,11 @@ const Box = createComponent(() => ({
 const color = 'rgb(200, 128, 0)'
 
 const LeftSection = createComponent(() => ({
-  padding: '1em',
-  color: '#333',
   background: '#ddd',
   border: '3px double ' + color,
   backgroundClip: 'padding-box',
   'border-right': 0,
-}))
+}), LogoSection, ['href'])
 
 const RightSection = createComponent(() => ({
   color: '#333',
@@ -33,7 +32,7 @@ const RightSection = createComponent(() => ({
 export const HorizontalFrame = ({ children }: PropsWithChildren) => {
   return (
     <Box>
-      <LeftSection>
+      <LeftSection href="/">
         <FadingBoxes />
         <GlobalOsTitle>
           GlobalOS

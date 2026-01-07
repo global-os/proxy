@@ -10,7 +10,7 @@ export const Route = createFileRoute('/login')({
 })
 
 function RouteComponent() {
-  const [email, setEmail] = useState('')
+  const [usernameOrEmail, setUsernameOrEmail] = useState('')
   const [password, setPassword] = useState('')
   const navigate = useNavigate()
 
@@ -18,7 +18,7 @@ function RouteComponent() {
     e.preventDefault()
 
     await signIn.email(
-      { email, password },
+      { email: usernameOrEmail, password },
       {
         onSuccess: () => {
           navigate({ to: '/' })
@@ -71,14 +71,20 @@ function RouteComponent() {
             <div>
               <label htmlFor="email">Email</label>
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="username"
+                type="text"
+                name="username"
+                autoComplete="username"
+                value={usernameOrEmail}
+                onChange={(e) => setUsernameOrEmail(e.target.value)}
               />
             </div>
             <div>
               <label htmlFor="password">Password</label>
               <input
+                name="password"
+                id="password"
+                autoComplete="current-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

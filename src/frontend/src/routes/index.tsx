@@ -34,7 +34,7 @@ function Index() {
           {' '}
           <Button onClick={() => {
             navigate({ to: '/register' })
-          }}>Register</Button>
+          }}>Sign Up</Button>
         </div>
       </HorizontalFrame>
     </Page>
