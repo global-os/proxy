@@ -1,0 +1,2 @@
+ALTER TABLE "process_domains" ALTER COLUMN "process_id" SET DATA TYPE integer USING "process_id"::integer;--> statement-breakpoint
+ALTER TABLE "process_domains" ADD CONSTRAINT "process_domains_process_id_process_id_fkey" FOREIGN KEY ("process_id") REFERENCES "process"("id");

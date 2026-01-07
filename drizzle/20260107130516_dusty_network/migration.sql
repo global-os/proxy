@@ -1,0 +1,1 @@
+ALTER TABLE "process_domains" DROP CONSTRAINT "process_domains_process_id_process_id_fkey";

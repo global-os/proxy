@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, index, serial} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, index, serial, integer } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -80,7 +80,7 @@ export const process = pgTable('process', {
 export const processDomains = pgTable('process_domains', {
   id: serial('id').primaryKey(),
   slug: text('domain_slug').notNull(),
-  process_id: text('process_id').notNull().references(() => process.id),
+  process_id: integer('process_id').notNull().references(() => process.id),
   cleartext: text('cleartext').notNull(),
 });
 
