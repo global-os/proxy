@@ -1,11 +1,12 @@
 #!/bin/sh
 
-API_KEY="${API_KEY:?API_KEY is required}"
+GITHUB_CLIENT_ID="${GITHUB_CLIENT_ID:?GITHUB_CLIENT_ID is required}"
 
-[ -z "${API_KEY}" ] && echo "API_KEY is required" && exit 1
+[ -z "${GITHUB_CLIENT_ID}" ] && echo "GITHUB_CLIENT_ID is required" && exit 1
 
-echo "Starting go server..."
+echo "Starting server..."
+env && false
 
-/app/server
+yarn start
 
 tail -f /dev/null
