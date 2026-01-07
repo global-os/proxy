@@ -2,7 +2,5 @@
 builder = "NIXPACKS"
 buildCommand = "npm install && cd src/frontend && npm install && cd - && npm run build"
 
-
-[[deploy.environmentVariables]]
-name = "NIXPACKS_NODE_VERSION"
-value = "20.19.0"
+[build]
+RAILWAY_DOCKERFILE_PATH = "Dockerfile"
