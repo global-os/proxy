@@ -5,11 +5,14 @@ import { GlobalOsTitle } from './GlobalOsTitle'
 
 const color = 'rgb(200, 128, 0)'
 
-const BoxContainer = createComponent(() => ({
-  display: 'flex',
-  flexDirection: 'row',
-  justifyContent: 'center',
-}), 'div')
+const BoxContainer = createComponent(
+  () => ({
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'center',
+  }),
+  'div'
+)
 
 const Box = createComponent(({ width }: { width?: string }) => ({
   width,
