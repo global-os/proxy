@@ -1,0 +1,1 @@
+ALTER TABLE "process" ALTER COLUMN "session_id" SET DATA TYPE serial;
