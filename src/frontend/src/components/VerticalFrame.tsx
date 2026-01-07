@@ -37,7 +37,7 @@ const BottomSection = createComponent(() => ({
 }))
 
 type Props = {
-  width: string
+  width?: string
 }
 
 export const VerticalFrame = ({

@@ -2,7 +2,7 @@ import { createComponent } from 'react-fela'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { useCallback } from 'react'
 
-const Container = createComponent(() => ({}))
+const Container = createComponent(() => ({ }))
 
 type Session = {
   id: string
