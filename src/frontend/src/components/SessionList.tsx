@@ -20,7 +20,7 @@ export const SessionList = () => {
     },
   })
 
-  const { data: mutData, isPending: mutIsPending, error: mutError, mutateAsync } = useMutation<Session[]>({
+  const { data: _mutData, isPending: _mutIsPending, error: _mutError, mutateAsync } = useMutation<Session[]>({
     mutationKey: ['sessions'],
     mutationFn: async () => {
       const r = await fetch('/api/sessions', {
