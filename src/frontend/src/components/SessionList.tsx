@@ -20,14 +20,38 @@ export const SessionList = () => {
     },
   })
 
-  const { isPending: _, isSuccess: __, error: _mutationError, mutate: _mutate } = useMutation({
-    mutationFn: async (): Promise<undefined> => {
-
-    }
+  const { data: mutData, isPending: mutIsPending, error: mutError, mutateAsync } = useMutation<Session[]>({
+    mutationKey: ['sessions'],
+    mutationFn: async () => {
+      const r = await fetch('/api/sessions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({})
+    })
+      const j = await r.json()
+      return j as Session[]
+    },
   })
 
-  const createSession = useCallback(() => {
+//   const { isPending: _, isSuccess: __, error: _mutationError, mutateAsync } = useMutation({
+//     mutationFn: async (): Promise<undefined> => {
+// return axios.post('/todos', newTodo)
+//     }
+//   })
 
+  const createSession = useCallback(() => {
+    mutateAsync(undefined, {
+      onSuccess: () => {
+        console.info('success mutating')
+      },
+    }).then(() => {
+      console.info('finished mutating')
+    }).catch(() => {
+      console.error('errored mutating')
+    })
   }, [])
 
   if (isPending) {
