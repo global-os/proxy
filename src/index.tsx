@@ -59,6 +59,18 @@ app.get('/app/api/sessions', async (c) => {
   return Response.json(rows)
 })
 
+app.post('/app/api/sessions', async (c) => {
+  const db = c.get('db')
+  const user = c.get('user')
+
+  await db
+    .insert(schema.sessions)
+    .values({
+      user_id: user!.id,
+      name: 'bar'
+    })
+})
+
 app.use(
   '/static/*',
   serveStatic({
