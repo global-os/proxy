@@ -82,7 +82,7 @@ export const SessionList = () => {
           {(data ?? []).map((sess, i) => {
             return (
               <div key={sess.id}>
-                <a href={`/sessions/${sess.id}`}>
+                <a href={`/session/${sess.id}`}>
                   Open session #{i + 1} {sess.name ? `(${sess.name})` : ''}
                 </a>
               </div>

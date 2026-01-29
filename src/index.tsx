@@ -24,7 +24,11 @@ const app = new Hono<Env>({
     const path = getPath(request)
     const { hostname } = new URL(request.url)
 
+    console.log('getPath called - hostname:', hostname, 'path:', path)
+
+
     const resolved = pathFromHostnameAndPath(hostname, path)
+    console.log('resolved:', resolved)
     return resolved
   },
 })
@@ -32,7 +36,7 @@ const app = new Hono<Env>({
 app.use(logger())
 
 app.use(
-  '/instance/*',
+  '/instance/**',
   middleware.provideDb,
   middleware.parseCookies,
   middleware.selectTargetHost,
@@ -48,20 +52,69 @@ app.use(
   middleware.logRequest,
 )
 
+app.use(
+  '/app/api/sessions',
+  middleware.provideDb,
+  middleware.parseCookies,
+  middleware.selectTargetHost,
+  middleware.betterAuthMiddleware,
+  middleware.logRequest,
+)
+
 app.basePath('/app/api/auth').route('/', authRoutes)
 
+app.get('/app/**', async (c) => {
+  const fullPath = path.join(
+    process.cwd(),
+    'src/frontend/dist/.vite/manifest.json'
+  )
+  const manifest = JSON.parse(fs.readFileSync(fullPath, 'utf-8'))
+
+  const indexHtml = manifest['index.html']
+  const indexJs = indexHtml.file
+  const css = indexHtml.css
+
+  return c.html(
+    <html>
+      <head>
+        {css.map((cssFile: string) => {
+          return <link rel="stylesheet" href={'/static/' + cssFile} />
+        })}
+        <script
+          type="module"
+          crossorigin=""
+          src={'/static/' + indexJs}
+        ></script>
+      </head>
+      <body>
+        <div id="root"></div>
+      </body>
+    </html>
+  )
+})
+
+
+
 app.get('/app/api/sessions', async (c) => {
+      console.log('=== GET /app/api/sessions ===')
   const db = c.get('db')
   const user = c.get('user')
+
+      console.log('db:', !!db)
+    console.log('user:', !!user, user?.id)
 
   if (!user) {
     return Response.json([])
   }
 
+  console.log('get rows')
+
   const rows = await db
     .select()
     .from(schema.sessions)
     .where(eq(schema.sessions.user_id, user.id))
+
+  console.log('get rows: ', rows)
 
   return Response.json(rows)
 })
@@ -192,35 +245,6 @@ app.all('/instance/*', async (c) => {
   }
 })
 
-app.get('/app/**', async (c) => {
-  const fullPath = path.join(
-    process.cwd(),
-    'src/frontend/dist/.vite/manifest.json'
-  )
-  const manifest = JSON.parse(fs.readFileSync(fullPath, 'utf-8'))
-
-  const indexHtml = manifest['index.html']
-  const indexJs = indexHtml.file
-  const css = indexHtml.css
-
-  return c.html(
-    <html>
-      <head>
-        {css.map((cssFile: string) => {
-          return <link rel="stylesheet" href={'/static/' + cssFile} />
-        })}
-        <script
-          type="module"
-          crossorigin=""
-          src={'/static/' + indexJs}
-        ></script>
-      </head>
-      <body>
-        <div id="root"></div>
-      </body>
-    </html>
-  )
-})
 
 
 async function main() {
@@ -228,7 +252,12 @@ async function main() {
 
   serve(
     {
-      fetch: app.fetch,
+      fetch: (request, ...args) => { 
+        console.log('=== FETCH CALLED ===');
+        console.log('Request URL:', request.url);
+        console.log('Request method:', request.method);
+        return app.fetch(request, ...args);
+      },
       port: Number(process.env.PORT) || 3000,
     },
     (info) => {

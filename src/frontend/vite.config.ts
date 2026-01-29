@@ -1,14 +1,24 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import { TanStackRouterVite } from "@tanstack/router-plugin/vite";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
+import rewriteAll from "vite-plugin-rewrite-all";
 
-// https://vite.dev/config/
 export default defineConfig({
   build: {
     manifest: true
   },
   plugins: [
-    TanStackRouterVite({ target: "react", autoCodeSplitting: true }),
+    {
+      name: 'debug-middleware',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          console.log('Vite request:', req.method, req.url);
+          next();
+        });
+      },
+    },
+    rewriteAll(),
+    tanstackRouter({ target: "react", autoCodeSplitting: true }),
     react(),
   ],
   server: {
@@ -18,8 +28,19 @@ export default defineConfig({
     ],
     proxy: {
       "/api": {
-        target: "http://app.app.dev.onetrueos.com:3000",
-        changeOrigin: true
+        target: "http://127.0.0.1:3000",  // Changed to 127.0.0.1
+        changeOrigin: true,
+        configure: (proxy, options) => {
+          proxy.on('error', (err, req, res) => {
+            console.log('Proxy ERROR:', err.message);
+          });
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            console.log('Proxying:', req.method, req.url, '→', options.target + req.url);
+          });
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            console.log('Proxy response:', proxyRes.statusCode, req.url);
+          });
+        }
       },
     },
   },

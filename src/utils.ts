@@ -11,34 +11,31 @@ export const pathFromHostnameAndPath = (
   hostname: string,
   path: string
 ): string => {
-  if ('localhost' === hostname) {
-    return path
+  // Extract hostname without port
+  const hostWithoutPort = hostname.split(':')[0];
+  
+  // Local development - prefix with /app
+  if (hostWithoutPort === 'localhost' || hostWithoutPort === '127.0.0.1') {
+    return path.startsWith('/app/') || path.startsWith('/instance/') 
+      ? path 
+      : '/app' + path;
   }
   
-  const matches = hostname.match(
-    /^((?:[a-z0-9])+)\.app(?:\.dev)?\.onetrueos\.com$/
-  )
-  
-  if (matches) {
-    const subdomain = matches[1]
-    if (subdomain === 'app') {
-      // Don't double-prefix paths that already start with /app/
-      if (path.startsWith('/app/') || path.startsWith('/static/')) {
-        return path
-      }
-      return '/app/' + removeLeadingSlash(path)
-    }
-    return '/instance/' + subdomain + '/' + removeLeadingSlash(path)
-  } else {
-    const matches = hostname.match(/^app\.(?:dev\.)?onetrueos\.com$/)
-    if (matches) {
-      // Don't double-prefix paths that already start with /app/
-      if (path.startsWith('/app/') || path.startsWith('/static/')) {
-        return path
-      }
-      return '/app/' + removeLeadingSlash(path)
-    }
+  // Already prefixed - return as-is
+  if (path.startsWith('/app/') || path.startsWith('/static/') || path.startsWith('/instance/')) {
+    return path;
   }
   
-  throw new Error('unrecognized domain')
+  // Instance subdomain: subdomain.app.dev.onetrueos.com
+  const instanceMatch = hostWithoutPort.match(/^([a-z0-9]+)\.app(?:\.dev)?\.onetrueos\.com$/);
+  if (instanceMatch && instanceMatch[1] !== 'app') {
+    return '/instance/' + instanceMatch[1] + '/' + removeLeadingSlash(path);
+  }
+  
+  // App subdomain or main domain - prefix with /app
+  if (hostWithoutPort.match(/^(?:app\.)?(?:dev\.)?onetrueos\.com$/)) {
+    return '/app/' + removeLeadingSlash(path);
+  }
+  
+  throw new Error('unrecognized domain: ' + hostname);
 }
