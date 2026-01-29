@@ -86,9 +86,7 @@ app.get('/app/**', async (c) => {
           src={'/static/' + indexJs}
         ></script>
       </head>
-      <body>
-        <div id="root"></div>
-      </body>
+      <body></body>
     </html>
   )
 })
