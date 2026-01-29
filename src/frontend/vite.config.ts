@@ -18,7 +18,8 @@ export default defineConfig({
     ],
     proxy: {
       "/api": {
-        target: "http://app.app.dev.onetrueos.com:3000"
+        target: "http://app.app.dev.onetrueos.com:3000",
+        changeOrigin: true
       },
     },
   },

@@ -10,9 +10,9 @@ export const auth = betterAuth({
   // Allow requests from the frontend development server
   trustedOrigins: [
     'http://localhost:5173',
+    'http://app.app.dev.onetrueos.com:5173',
     'https://app.onetrueos.com',
     'https://app.app.onetrueos.com',
-    'https://app.app.onetrueos.com:5173',
   ],
   emailAndPassword: {
     enabled: true,
