@@ -63,36 +63,6 @@ app.use(
 
 app.basePath('/app/api/auth').route('/', authRoutes)
 
-app.get('/app/**', async (c) => {
-  const fullPath = path.join(
-    process.cwd(),
-    'src/frontend/dist/.vite/manifest.json'
-  )
-  const manifest = JSON.parse(fs.readFileSync(fullPath, 'utf-8'))
-
-  const indexHtml = manifest['index.html']
-  const indexJs = indexHtml.file
-  const css = indexHtml.css
-
-  return c.html(
-    <html>
-      <head>
-        {css.map((cssFile: string) => {
-          return <link rel="stylesheet" href={'/static/' + cssFile} />
-        })}
-        <script
-          type="module"
-          crossorigin=""
-          src={'/static/' + indexJs}
-        ></script>
-      </head>
-      <body></body>
-    </html>
-  )
-})
-
-
-
 app.get('/app/api/sessions', async (c) => {
       console.log('=== GET /app/api/sessions ===')
   const db = c.get('db')
@@ -242,6 +212,36 @@ app.all('/instance/*', async (c) => {
     return c.text('Proxy error occurred', 500)
   }
 })
+
+app.get('/app/**', async (c) => {
+  const fullPath = path.join(
+    process.cwd(),
+    'src/frontend/dist/.vite/manifest.json'
+  )
+  const manifest = JSON.parse(fs.readFileSync(fullPath, 'utf-8'))
+
+  const indexHtml = manifest['index.html']
+  const indexJs = indexHtml.file
+  const css = indexHtml.css
+
+  return c.html(
+    <html>
+      <head>
+        {css.map((cssFile: string) => {
+          return <link rel="stylesheet" href={'/static/' + cssFile} />
+        })}
+        <script
+          type="module"
+          crossorigin=""
+          src={'/static/' + indexJs}
+        ></script>
+      </head>
+      <body></body>
+    </html>
+  )
+})
+
+
 
 
 
