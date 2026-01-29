@@ -21,7 +21,10 @@ export const pathFromHostnameAndPath = (
   }
   
   // App domains: app.dev.onetrueos.com (dev), app.app.onetrueos.com (prod)
-  if (hostWithoutPort === 'app.dev.onetrueos.com' || hostWithoutPort === 'app.app.onetrueos.com') {
+  if (hostWithoutPort === 'app.dev.onetrueos.com' || hostWithoutPort == 'app.app.dev.onetrueos.com' || hostWithoutPort === 'app.app.onetrueos.com') {
+    if (path.startsWith('/static/')) {
+      return path
+    }
     return path === '/' ? '/app' : '/app/' + removeLeadingSlash(path);
   }
   
