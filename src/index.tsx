@@ -88,7 +88,7 @@ app.use(
   })
 )
 
-app.get('/app/*', async (c) => {
+app.get('/app/**', async (c) => {
   const fullPath = path.join(
     process.cwd(),
     'src/frontend/dist/.vite/manifest.json'
