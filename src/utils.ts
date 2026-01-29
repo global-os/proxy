@@ -14,19 +14,14 @@ export const pathFromHostnameAndPath = (
   // Extract hostname without port
   const hostWithoutPort = hostname.split(':')[0];
   
-  // Local development - prefix with /app
-  if (hostWithoutPort === 'localhost' || hostWithoutPort === '127.0.0.1') {
-    return path === '/' ? '/app' : '/app' + path;
-  }
-  
-  // Instance subdomain: subdomain.app.dev.onetrueos.com
+  // Instance subdomain: subdomain.app.dev.onetrueos.com or subdomain.app.onetrueos.com (but NOT app)
   const instanceMatch = hostWithoutPort.match(/^([a-z0-9]+)\.app(?:\.dev)?\.onetrueos\.com$/);
   if (instanceMatch && instanceMatch[1] !== 'app') {
     return '/instance/' + instanceMatch[1] + '/' + removeLeadingSlash(path);
   }
   
-  // App subdomain or main domain - prefix with /app
-  if (hostWithoutPort.match(/^(?:app\.)?(?:dev\.)?onetrueos\.com$/)) {
+  // App domains: app.dev.onetrueos.com (dev), app.app.onetrueos.com (prod)
+  if (hostWithoutPort === 'app.dev.onetrueos.com' || hostWithoutPort === 'app.app.onetrueos.com') {
     return path === '/' ? '/app' : '/app/' + removeLeadingSlash(path);
   }
   
