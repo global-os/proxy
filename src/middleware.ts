@@ -4,8 +4,10 @@ import { Env } from './types'
 import * as schema from './db/schema.js'
 import { eq } from 'drizzle-orm'
 import { pathFromHostnameAndPath } from './utils'
+import { auth } from './auth.js'
 
 export const provideDb: MiddlewareHandler<Env> = async (c, next) => {
+  console.log('setting db to', db)
   c.set('db', db)
   await next()
 }
@@ -66,5 +68,22 @@ export const selectTargetHost: MiddlewareHandler<Env> = async (c, next) => {
 export const logRequest: MiddlewareHandler<Env> = async (c, next) => {
   const targetHost = c.get('targetHost')
   console.log(`Proxying: ${c.req.path} -> https://${targetHost}${c.req.path}`)
+  await next()
+}
+
+export const betterAuthMiddleware: MiddlewareHandler<Env> = async (c, next) => {
+  try {
+    const session = await auth.api.getSession({
+      headers: c.req.raw.headers
+    })
+    
+    c.set('user', session?.user ?? null)
+    c.set('session', session?.session ?? null)
+  } catch (error) {
+    console.error('Auth error:', error)
+    c.set('user', null)
+    c.set('session', null)
+  }
+  
   await next()
 }

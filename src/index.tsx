@@ -41,6 +41,15 @@ app.use(
   middleware.logRequest
 )
 
+app.use(
+  '/app/*',
+  middleware.provideDb,
+  middleware.parseCookies,
+  middleware.selectTargetHost,
+  middleware.betterAuthMiddleware,
+  middleware.logRequest,
+)
+
 app.basePath('/app/api/auth').route('/', authRoutes)
 
 app.get('/app/api/sessions', async (c) => {
@@ -59,7 +68,10 @@ app.get('/app/api/sessions', async (c) => {
   return Response.json(rows)
 })
 
+console.log('woot')
+
 app.post('/app/api/sessions', async (c) => {
+  console.log('hit post sessions')
   const db = c.get('db')
   const user = c.get('user')
 
@@ -69,6 +81,8 @@ app.post('/app/api/sessions', async (c) => {
       user_id: user!.id,
       name: 'bar'
     })
+  
+  return c.body(null, 200)
 })
 
 app.use(
