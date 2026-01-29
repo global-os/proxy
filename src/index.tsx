@@ -102,16 +102,18 @@ app.get('/app/**', async (c) => {
   return c.html(
     <html>
       <head>
+        {css.map((cssFile: string) => {
+          return <link rel="stylesheet" href={'/static/' + cssFile} />
+        })}
         <script
           type="module"
           crossorigin=""
           src={'/static/' + indexJs}
         ></script>
-        {css.map((cssFile: string) => {
-          return <link rel="stylesheet" href={'/static/' + cssFile} />
-        })}
       </head>
-      <body></body>
+      <body>
+        <div id="root"></div>
+      </body>
     </html>
   )
 })
