@@ -16,14 +16,7 @@ export const pathFromHostnameAndPath = (
   
   // Local development - prefix with /app
   if (hostWithoutPort === 'localhost' || hostWithoutPort === '127.0.0.1') {
-    return path.startsWith('/app/') || path.startsWith('/instance/') 
-      ? path 
-      : '/app' + path;
-  }
-  
-  // Already prefixed - return as-is
-  if (path.startsWith('/app/') || path.startsWith('/static/') || path.startsWith('/instance/')) {
-    return path;
+    return path === '/' ? '/app' : '/app' + path;
   }
   
   // Instance subdomain: subdomain.app.dev.onetrueos.com
@@ -34,7 +27,7 @@ export const pathFromHostnameAndPath = (
   
   // App subdomain or main domain - prefix with /app
   if (hostWithoutPort.match(/^(?:app\.)?(?:dev\.)?onetrueos\.com$/)) {
-    return '/app/' + removeLeadingSlash(path);
+    return path === '/' ? '/app' : '/app/' + removeLeadingSlash(path);
   }
   
   throw new Error('unrecognized domain: ' + hostname);
