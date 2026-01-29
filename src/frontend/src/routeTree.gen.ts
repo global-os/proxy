@@ -13,6 +13,7 @@ import { Route as SessionsRouteImport } from './routes/sessions'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SessionSessionIdRouteImport } from './routes/session.$sessionId'
 
 const SessionsRoute = SessionsRouteImport.update({
   id: '/sessions',
@@ -34,18 +35,25 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SessionSessionIdRoute = SessionSessionIdRouteImport.update({
+  id: '/session/$sessionId',
+  path: '/session/$sessionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/sessions': typeof SessionsRoute
+  '/session/$sessionId': typeof SessionSessionIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/sessions': typeof SessionsRoute
+  '/session/$sessionId': typeof SessionSessionIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,20 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/sessions': typeof SessionsRoute
+  '/session/$sessionId': typeof SessionSessionIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/register' | '/sessions'
+  fullPaths: '/' | '/login' | '/register' | '/sessions' | '/session/$sessionId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/register' | '/sessions'
-  id: '__root__' | '/' | '/login' | '/register' | '/sessions'
+  to: '/' | '/login' | '/register' | '/sessions' | '/session/$sessionId'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/register'
+    | '/sessions'
+    | '/session/$sessionId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +82,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   SessionsRoute: typeof SessionsRoute
+  SessionSessionIdRoute: typeof SessionSessionIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +115,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/session/$sessionId': {
+      id: '/session/$sessionId'
+      path: '/session/$sessionId'
+      fullPath: '/session/$sessionId'
+      preLoaderRoute: typeof SessionSessionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +130,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   SessionsRoute: SessionsRoute,
+  SessionSessionIdRoute: SessionSessionIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

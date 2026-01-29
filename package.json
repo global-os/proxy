@@ -42,5 +42,8 @@
     "styled-components": "^6.1.19",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@tanstack/router-cli": "^1.157.16"
   }
 }
