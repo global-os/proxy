@@ -40,7 +40,7 @@ app.use(
 )
 
 app.use(
-  '/app/*',
+  '/app/**',
   middleware.provideDb,
   middleware.parseCookies,
   middleware.selectTargetHost,
