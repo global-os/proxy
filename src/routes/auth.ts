@@ -17,12 +17,10 @@ export function createRouter() {
 const router = createRouter();
 
 router.on(["POST", "GET"], "/*", (c) => {
-  console.log('request to auth!111')
   return auth.handler(c.req.raw);
 });
 
 router.on(["POST", "GET"], "/**", (c) => {
-  console.log('request to auth!222')
   return auth.handler(c.req.raw);
 });
 

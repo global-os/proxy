@@ -23,11 +23,9 @@ const makeReplaceURL =
       let urlObj
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
         // Try with https first as fallback base
-        console.log('parsing3', url)
         urlObj = new URL(url, `https://${oldDomain}`)
       } else {
         // Parse absolute URLs directly
-        console.log('parsing4', url)
         urlObj = new URL(url)
       }
 

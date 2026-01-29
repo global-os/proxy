@@ -11,7 +11,6 @@ export const pathFromHostnameAndPath = (
   hostname: string,
   path: string
 ): string => {
-  console.log('reslving', hostname, path)
   if ('localhost' === hostname) {
     return path
   }
@@ -22,7 +21,6 @@ export const pathFromHostnameAndPath = (
   if (matches) {
     const subdomain = matches[1]
     if (subdomain === 'app') {
-      console.log('matches app!')
       if (path.startsWith('/static/')) {
         return path
       }

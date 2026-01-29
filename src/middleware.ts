@@ -7,7 +7,6 @@ import { pathFromHostnameAndPath } from './utils'
 import { auth } from './auth.js'
 
 export const provideDb: MiddlewareHandler<Env> = async (c, next) => {
-  console.log('setting db to', db)
   c.set('db', db)
   await next()
 }
@@ -34,7 +33,6 @@ export const parseCookies: MiddlewareHandler<Env> = async (c, next) => {
 export const selectTargetHost: MiddlewareHandler<Env> = async (c, next) => {
   const cookies = c.get('cookies')
 
-  console.log('parsing1111,', c.req.url)
   const url = new URL(c.req.url)
   const initialPart = url.host.split('.')[0]
   const db = c.get('db')
@@ -58,8 +56,6 @@ export const selectTargetHost: MiddlewareHandler<Env> = async (c, next) => {
     c.set('isLocal', true)
   }
 
-  console.log('host is', url.host)
-  console.log('setting targethost to ', targetHost)
   c.set('targetHost', targetHost)
   await next()
 }
