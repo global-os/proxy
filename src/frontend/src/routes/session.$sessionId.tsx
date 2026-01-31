@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Page } from '../components/Page'
+import { Workspace, WorkspaceActions } from '../components/Workspace'
 
 export const Route = createFileRoute('/session/$sessionId')({
   component: RouteComponent,
@@ -11,7 +12,21 @@ function RouteComponent() {
 
   return (
     <Page>
-        Here is a session #{sessionId}
+      <Workspace>
+        {{
+          onStartup: (actions: WorkspaceActions) => {
+            actions.openWindow({
+              title: 'Foo',
+
+              width: 300,
+              height: 300,
+
+              x: 0,
+              y: 0,
+            })
+          },
+        }}
+      </Workspace>
     </Page>
   )
 }
