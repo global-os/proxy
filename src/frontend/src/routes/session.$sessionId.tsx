@@ -24,6 +24,16 @@ function RouteComponent() {
               x: 0,
               y: 0,
             })
+            actions.openWindow({
+              title: 'Bar',
+
+              width: 300,
+              height: 300,
+
+              x: 20,
+              y: 20,
+            })
+            console.log('added 2nd window')
           },
         }}
       </Workspace>

@@ -1,10 +1,35 @@
-import { useEffect, useReducer } from 'react'
+import { useEffect, useReducer, useRef } from 'react'
 import { createComponent } from 'react-fela'
 
 const Frame = createComponent(() => ({
   background: '#e5a455ff',
   width: '100%',
   height: '100%',
+}))
+
+const Chrome = createComponent(
+  ({
+    left,
+    top,
+    width,
+    height
+  }: {
+    left: string
+    top: string
+    width: string
+    height: string
+  }) => ({
+    border: '1px solid rgba(0,0,0, 0.5)',
+    position: 'relative',
+    width,
+    height,
+    top,
+    left,
+  })
+)
+
+const Title = createComponent(() => ({
+  borderBottom: '1px solid rgba(0,0,0, 0.5)'
 }))
 
 type State = {
@@ -85,14 +110,29 @@ export const Workspace = ({ children }: Props) => {
     },
   }
 
+  const hasRun = useRef(false)
+
   useEffect(() => {
+    if (hasRun.current) return
+    hasRun.current = true
+
     children.onStartup(workspaceActions)
   }, [])
 
   return (
     <Frame>
       {workspaceState.windows.map((win) => {
-        return <div key={win.id}>window hello</div>
+        return (
+          <Chrome
+            key={win.id}
+            left={win.x + 'px'}
+            top={win.y + 'px'}
+            width={win.width + 'px'}
+            height={win.height + 'px'}
+          >
+            <Title>{win.title}</Title>
+          </Chrome>
+        )
       })}
     </Frame>
   )

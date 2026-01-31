@@ -22,6 +22,12 @@ export const pathFromHostnameAndPath = (
   
   // App domains: app.dev.onetrueos.com (dev), app.app.onetrueos.com (prod)
   if (hostWithoutPort === 'app.dev.onetrueos.com' || hostWithoutPort == 'app.app.dev.onetrueos.com' || hostWithoutPort === 'app.app.onetrueos.com') {
+
+    // Needed to support Vite dev server ONLY
+    if (path.startsWith('/assets/')) {
+      return '/static' + path
+    }
+
     if (path.startsWith('/static/')) {
       return path
     }

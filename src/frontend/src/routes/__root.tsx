@@ -11,6 +11,8 @@ const queryClient = new QueryClient()
 
 export const Route = createRootRoute({
   component: RouteComponent,
+  notFoundComponent: () => <div>404 - Page Not Found</div>
+
 })
 
 function RouteComponent() {

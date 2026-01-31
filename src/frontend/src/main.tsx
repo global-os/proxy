@@ -1,3 +1,5 @@
+console.log('🚀 Main.tsx executing');
+
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
@@ -7,12 +9,20 @@ import { routeTree } from './routeTree.gen'
 
 import './index.css'
 
+console.log('main.tsx')
+
 const router = createRouter({
   routeTree,
   defaultNotFoundComponent: () => {
     return <div>Could not find page</div>
   },
+  defaultErrorComponent: () => {
+    return <div>error comp</div>
+  }
 })
+
+console.log('Registered routes:', router.routeTree)
+console.log('Current location:', window.location.pathname)
 
 declare module '@tanstack/react-router' {
   interface Register {
