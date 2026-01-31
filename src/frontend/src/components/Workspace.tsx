@@ -64,7 +64,7 @@ type Props = {
 }
 
 export type WorkspaceActions = {
-  openWindow: (window: Window) => void
+  openWindow: (window: WindowSpec) => void
 }
 
 export const Workspace = ({ children }: Props) => {
@@ -77,10 +77,10 @@ export const Workspace = ({ children }: Props) => {
   })
 
   const workspaceActions: WorkspaceActions = {
-    openWindow(window: Window) {
+    openWindow(windowSpec: WindowSpec) {
       workspaceDispatch({
         type: WorkspaceActionKind.OPEN_WINDOW,
-        payload: window,
+        payload: windowSpec,
       })
     },
   }
