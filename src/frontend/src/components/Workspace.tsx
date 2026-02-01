@@ -6,6 +6,7 @@ import {
   useEffect,
   useReducer,
   useRef,
+  useState,
 } from 'react'
 import { createComponent } from 'react-fela'
 
@@ -14,7 +15,7 @@ const Frame = createComponent(() => ({
   background: '#e5a455ff',
   width: '100%',
   height: '100%',
-}))
+}), 'div', ['onMouseMove'])
 
 const Chrome = createComponent(
   ({
@@ -43,12 +44,13 @@ const Title = createComponent(
     background: 'rgba(255,255,255, 0.8)',
   }),
   'div',
-  ['data-window-index', 'onMouseMove']
+  ['data-window-index', 'onMouseMove', 'onMouseDown']
 )
 
 type State = {
   windows: Window[]
   nextWindowID: number
+  dragOrigin: undefined | [number, number]
 }
 
 type WindowSpec = {
@@ -75,7 +77,8 @@ type Window = {
 
 enum WorkspaceActionKind {
   OPEN_WINDOW = 'OPEN_WINDOW',
-  MOVE_WINDOW = 'MOVE_WINDOW',
+  DRAG_WINDOW = 'DRAG_WINDOW',
+  START_DRAGGING_WINDOW = 'START_DRAGGING_WINDOW',
 }
 
 type WorkspaceAction =
@@ -84,34 +87,52 @@ type WorkspaceAction =
       payload: WindowSpec
     }
   | {
-      type: WorkspaceActionKind.MOVE_WINDOW
+      type: WorkspaceActionKind.DRAG_WINDOW
+      index: number
+      payload: [number, number]
+    }
+  | {
+      type: WorkspaceActionKind.START_DRAGGING_WINDOW
       index: number
       payload: [number, number]
     }
 
 function reducer(state: State, action: WorkspaceAction): State {
-  if (action.type === WorkspaceActionKind.OPEN_WINDOW) {
-    return {
-      ...state,
-      nextWindowID: state.nextWindowID + 1,
-      windows: [
-        ...state.windows,
-        { ...action.payload, id: state.nextWindowID },
-      ],
+  switch (action.type) {
+    case WorkspaceActionKind.OPEN_WINDOW: {
+      return {
+        ...state,
+        nextWindowID: state.nextWindowID + 1,
+        windows: [
+          ...state.windows,
+          { ...action.payload, id: state.nextWindowID },
+        ],
+      }
+    }
+    case WorkspaceActionKind.DRAG_WINDOW: {
+      if (!state.dragOrigin) {
+        throw new Error('cannot drag while drag origin is undefined')
+      }
+      const windows = [...state.windows]
+      const win = windows[action.index]
+      windows[action.index] = {
+        ...win,
+        x: win.x + (action.payload[0] - state.dragOrigin[0]),
+        y: win.y + (action.payload[1] - state.dragOrigin[1]),
+      }
+      return {
+        ...state,
+        windows,
+        dragOrigin: action.payload,
+      }
+    }
+    case WorkspaceActionKind.START_DRAGGING_WINDOW: {
+      return {
+        ...state,
+        dragOrigin: action.payload
+      }
     }
   }
-  if (action.type === WorkspaceActionKind.MOVE_WINDOW) {
-    const windows = [...state.windows]
-    const win = windows[action.index]
-    win.x += action.payload[0]
-    win.y += action.payload[1]
-    windows[action.index] = win
-    return {
-      ...state,
-      windows,
-    }
-  }
-  return state
 }
 
 type Props = {
@@ -131,6 +152,7 @@ export const Workspace = ({ children }: Props) => {
   ] = useReducer(reducer, {
     nextWindowID: 1,
     windows: [],
+    dragOrigin: undefined,
   })
 
   const workspaceActions: WorkspaceActions = {
@@ -158,26 +180,47 @@ export const Workspace = ({ children }: Props) => {
     return (window as any).innerHeight / 2 - height / 2 + y
   }
 
-  const onMouseMove = useCallback((event: MouseEvent) => {
-    if (event.eventPhase !== 3) {
-      return
-    }
-    if (event.buttons) {
-      const index = Number.parseInt((event.target as HTMLElement).getAttribute(
-        'data-window-index'
-      ) ?? '0', 10)
-      workspaceDispatch({
-        type: WorkspaceActionKind.MOVE_WINDOW,
-        index,
-        payload: [event.movementX, event.movementY],
-      })
-    }
-    event.stopPropagation()
-    event.preventDefault()
+  const onMouseDown = useCallback((event: MouseEvent) => {
+    console.log('clicked', event.clientX)
+    const index = Number.parseInt(
+      (event.target as HTMLElement).getAttribute('data-window-index') ?? '0',
+      10
+    )
+
+    workspaceDispatch({
+      type: WorkspaceActionKind.START_DRAGGING_WINDOW,
+      index,
+      payload: [event.clientX, event.clientY],
+    })
   }, [])
 
+  const onMouseMove = useCallback(
+    (event: MouseEvent) => {
+      console.log('dragged', event.buttons, workspaceState.dragOrigin)
+      if (event.eventPhase !== 3) {
+        return
+      }
+      if (event.buttons && workspaceState.dragOrigin) {
+        console.log('dragging', event.clientX)
+        const index = Number.parseInt(
+          (event.target as HTMLElement).getAttribute('data-window-index') ??
+            '0',
+          10
+        )
+        workspaceDispatch({
+          type: WorkspaceActionKind.DRAG_WINDOW,
+          index,
+          payload: [event.clientX, event.clientY],
+        })
+      }
+      event.stopPropagation()
+      event.preventDefault()
+    },
+    [workspaceState.dragOrigin]
+  )
+
   return (
-    <Frame>
+    <Frame onMouseMove={onMouseMove}>
       {workspaceState.windows.map((win, i) => {
         return (
           <Chrome
@@ -187,7 +230,10 @@ export const Workspace = ({ children }: Props) => {
             width={win.width + 'px'}
             height={win.height + 'px'}
           >
-            <Title data-window-index={i} onMouseMove={onMouseMove}>
+            <Title
+              data-window-index={i}
+              onMouseDown={onMouseDown}
+            >
               {win.title}
             </Title>
           </Chrome>

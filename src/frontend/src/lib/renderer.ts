@@ -11,7 +11,9 @@ import { Animations } from '../types/animations'
 const createRenderer = () => {
   const renderer = felaCreateRenderer({
     plugins: [embedded(), unit(), prefixer(), fallbackValue()],
-    enhancers: [perf(), beautifier(), sortMediaQueryMobileFirst()],
+    enhancers: [
+      // perf(),
+      beautifier(), sortMediaQueryMobileFirst()],
   })
 
   const fadingBoxes = () => ({
