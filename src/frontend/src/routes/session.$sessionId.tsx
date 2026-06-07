@@ -10,6 +10,12 @@ function RouteComponent() {
   const { sessionId } = Route.useParams()
   const _navigate = useNavigate()
 
+  const runProgram = () => {
+    // create iframe
+    // load (HTML) code into subdomain
+    // have record of process
+  };
+
   return (
     <Page>
       <Workspace>
