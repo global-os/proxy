@@ -10,11 +10,13 @@ import { serve } from '@hono/node-server'
 
 import * as schema from './db/schema.js'
 import { testConnection } from './db/index.js'
+import { seedUserFixtures } from './db/seed.js'
 import * as middleware from './middleware.js'
 import { Env } from './types'
 import { replaceDomainInHTML } from './replace.js'
 import { pathFromHostnameAndPath } from './utils.js'
 import authRoutes from './routes/auth.js'
+import fsRoutes from './routes/fs.js'
 import { eq } from 'drizzle-orm'
 
 dotenv.config() // Loads .env from root
@@ -48,6 +50,7 @@ app.use(
   middleware.parseCookies,
   middleware.selectTargetHost,
   middleware.betterAuthMiddleware,
+  middleware.setRlsUser,
   middleware.logRequest
 )
 
@@ -61,6 +64,7 @@ app.use(
 )
 
 app.basePath('/app/api/auth').route('/', authRoutes)
+app.basePath('/app/api/fs').route('/', fsRoutes)
 
 app.get('/app/api/sessions', async (c) => {
   console.log('=== GET /app/api/sessions ===')
@@ -223,6 +227,7 @@ app.all('/instance/*', async (c) => {
 
 async function main() {
   await testConnection()
+  await seedUserFixtures()
 
   serve(
     {

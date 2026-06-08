@@ -1,5 +1,7 @@
 import { MiddlewareHandler } from 'hono'
-import { db } from './db/index.js'
+import { drizzle } from 'drizzle-orm/node-postgres'
+import { db, pool } from './db/index.js'
+import relations from './db/relations.js'
 import { Env } from './types'
 import * as schema from './db/schema.js'
 import { eq } from 'drizzle-orm'
@@ -65,6 +67,28 @@ export const logRequest: MiddlewareHandler<Env> = async (c, next) => {
   const targetHost = c.get('targetHost')
   console.log(`Proxying: ${c.req.path} -> https://${targetHost}${c.req.path}`)
   await next()
+}
+
+export const setRlsUser: MiddlewareHandler<Env> = async (c, next) => {
+  const user = c.get('user')
+  if (!user) {
+    await next()
+    return
+  }
+
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    await client.query('SELECT set_config($1, $2, true)', ['app.user_id', user.id])
+    c.set('db', drizzle({ client, schema, relations }) as any)
+    await next()
+    await client.query('COMMIT')
+  } catch (e) {
+    await client.query('ROLLBACK')
+    throw e
+  } finally {
+    client.release()
+  }
 }
 
 export const betterAuthMiddleware: MiddlewareHandler<Env> = async (c, next) => {

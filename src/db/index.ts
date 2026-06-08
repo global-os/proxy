@@ -14,7 +14,7 @@ const dbConfig = {
 }
 
 // Create connection pool
-const pool = new Pool(dbConfig)
+export const pool = new Pool(dbConfig)
 
 export const db = drizzle({ schema, relations, client: pool })
 

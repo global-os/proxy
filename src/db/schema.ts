@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, index, serial, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, index, serial, integer, pgEnum, bytea } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -9,7 +9,7 @@ export const user = pgTable("user", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
-    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .$onUpdate(() => new Date())
     .notNull(),
 });
 
@@ -21,7 +21,7 @@ export const session = pgTable(
     token: text("token").notNull().unique(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
-      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .$onUpdate(() => new Date())
       .notNull(),
     ipAddress: text("ip_address"),
     userAgent: text("user_agent"),
@@ -50,7 +50,7 @@ export const account = pgTable(
     password: text("password"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
-      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .$onUpdate(() => new Date())
       .notNull(),
   },
   (table) => [index("account_userId_idx").on(table.userId)],
@@ -66,11 +66,44 @@ export const verification = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
-      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .$onUpdate(() => new Date())
       .notNull(),
   },
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
+
+export const processDomainTypeEnum = pgEnum('process_domain_type', ['proxy', 'local_exe']);
+
+export const directory = pgTable('directory', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  parent_id: integer('parent_id').references((): any => directory.id),
+  user_id: text('user_id').references(() => user.id),
+}, (table) => [
+  index('directory_parent_id_idx').on(table.parent_id),
+  index('directory_user_id_idx').on(table.user_id),
+]);
+
+export const file = pgTable('file', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  content: bytea('content').notNull(),
+  mime_type: text('mime_type').notNull(),
+  hash_method: text('hash_method').notNull(),
+  parent_id: integer('parent_id').notNull().references(() => directory.id),
+  user_id: text('user_id').references(() => user.id),
+}, (table) => [
+  index('file_parent_id_idx').on(table.parent_id),
+  index('file_user_id_idx').on(table.user_id),
+]);
+
+export const image = pgTable('image', {
+  id: serial('id').primaryKey(),
+  directory_id: integer('directory_id').notNull().references(() => directory.id),
+  directory_checksum: text('directory_checksum'),
+  tar_checksum: text('tar_checksum'),
+  tar_bytes: bytea('tar_bytes'),
+});
 
 export const process = pgTable('process', {
   id: serial('id').primaryKey(),
@@ -79,9 +112,11 @@ export const process = pgTable('process', {
 
 export const processDomains = pgTable('process_domains', {
   id: serial('id').primaryKey(),
+  type: processDomainTypeEnum('type').notNull().default('proxy'),
   slug: text('domain_slug').notNull(),
   process_id: integer('process_id').notNull().references(() => process.id),
   cleartext: text('cleartext').notNull(),
+  image_id: integer('image_id').references(() => image.id),
 });
 
 export const sessions = pgTable('sessions', {

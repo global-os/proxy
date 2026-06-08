@@ -1,0 +1,1 @@
+ALTER TABLE "file" ADD COLUMN "hash_method" text NOT NULL;
