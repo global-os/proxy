@@ -29,6 +29,8 @@ const app = new Hono<Env>({
 
 app.use(logger())
 
+app.get('/health', (c) => c.json({ status: 'ok' }))
+
 app.use(
   '/instance/**',
   middleware.provideDb,
