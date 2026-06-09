@@ -47,10 +47,10 @@ async function buildTar(dirName: string, dirs: DirEntry[], files: FileEntry[]): 
   pack.pipe(out);
 
   // root dir entry
-  pack.add(new tar.ReadEntry(new tar.Header({ path: `${dirName}/`, type: "Directory", size: 0 }), []));
+  pack.add(new tar.ReadEntry(new tar.Header({ path: `${dirName}/`, type: "Directory", size: 0 })));
 
   for (const d of dirs) {
-    pack.add(new tar.ReadEntry(new tar.Header({ path: `${d.path}/`, type: "Directory", size: 0 }), []));
+    pack.add(new tar.ReadEntry(new tar.Header({ path: `${d.path}/`, type: "Directory", size: 0 })));
   }
 
   for (const f of files) {
