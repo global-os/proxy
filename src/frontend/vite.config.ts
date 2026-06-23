@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -50,7 +51,7 @@ export default defineConfig({
     include: ['cssbeautify', ...felaPackages],
     needsInterop: ['cssbeautify'],
   },
-  plugins: [{
+  plugins: [tailwindcss(), {
     name: 'debug-middleware',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
