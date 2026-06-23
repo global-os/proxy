@@ -9,11 +9,14 @@ import sortMediaQueryMobileFirst from 'fela-sort-media-query-mobile-first'
 import { Animations } from '../types/animations'
 
 const createRenderer = () => {
+  const enhancers = [sortMediaQueryMobileFirst()]
+  if (import.meta.env.DEV) {
+    enhancers.unshift(beautifier())
+  }
+
   const renderer = felaCreateRenderer({
     plugins: [embedded(), unit(), prefixer(), fallbackValue()],
-    enhancers: [
-      // perf(),
-      beautifier(), sortMediaQueryMobileFirst()],
+    enhancers,
   })
 
   const fadingBoxes = () => ({

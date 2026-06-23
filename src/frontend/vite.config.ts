@@ -5,10 +5,44 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
+const felaPackages = [
+  'fela',
+  'fela-beautifier',
+  'fela-perf',
+  'fela-plugin-embedded',
+  'fela-plugin-fallback-value',
+  'fela-plugin-prefixer',
+  'fela-plugin-unit',
+  'fela-sort-media-query-mobile-first',
+  'fela-bindings',
+  'fela-dom',
+  'fela-tools',
+  'fela-utils',
+  'react-fela',
+];
+
 // More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
+  resolve: {
+    mainFields: ['module', 'jsnext:main', 'browser', 'main'],
+    conditions: ['import', 'module', 'browser', 'default'],
+    alias: Object.fromEntries(
+      felaPackages.map((pkg) => [
+        pkg,
+        path.resolve(dirname, `node_modules/${pkg}/es/index.js`),
+      ]),
+    ),
+  },
   build: {
-    manifest: true
+    manifest: true,
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true,
+    },
+  },
+  optimizeDeps: {
+    include: ['cssbeautify', ...felaPackages],
+    needsInterop: ['cssbeautify'],
   },
   plugins: [{
     name: 'debug-middleware',

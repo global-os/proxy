@@ -106,10 +106,19 @@ app.post('/app/api/sessions', async (c) => {
   return c.body(null, 200)
 })
 
+const frontendDist = path.join(process.cwd(), 'src/frontend/dist')
+
+app.use(
+  '/assets/*',
+  serveStatic({
+    root: frontendDist,
+  })
+)
+
 app.use(
   '/static/*',
   serveStatic({
-    root: path.join(process.cwd(), 'src/frontend/dist'),
+    root: frontendDist,
     rewriteRequestPath: (path) => path.replace(/^\/static/, ''),
   })
 )
