@@ -6,6 +6,8 @@ import relations from './relations.js'
 
 const dbConfig = {
   connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+  family: 4, // force IPv4 — Supabase direct connection returns IPv6 which may be unreachable locally
   // host: process.env.PGHOST,
   // port: parseInt(process.env.PGPORT ?? '5432'),
   // user: process.env.PGUSER,

@@ -1,10 +1,8 @@
-import dotenv from 'dotenv'
+import 'dotenv/config'
 import { serve } from '@hono/node-server'
 import { testConnection } from './db/index.js'
 import { seedUserFixtures } from './db/seed.js'
 import app from './app.js'
-
-dotenv.config()
 
 async function main() {
   await testConnection()

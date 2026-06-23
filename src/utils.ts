@@ -25,8 +25,8 @@ export const pathFromHostnameAndPath = (
     return '/www'
   }
 
-  // App domains: app.dev.onetrueos.com (dev), app.app.onetrueos.com (prod), global-os.vercel.app
-  if (hostWithoutPort === 'app.dev.onetrueos.com' || hostWithoutPort == 'app.app.dev.onetrueos.com' || hostWithoutPort === 'app.app.onetrueos.com' || hostWithoutPort === 'global-os.vercel.app') {
+  // App domains: app.dev.onetrueos.com (dev), app.app.onetrueos.com (prod), global-os.vercel.app + any *.vercel.app preview URLs
+  if (hostWithoutPort === 'app.dev.onetrueos.com' || hostWithoutPort == 'app.app.dev.onetrueos.com' || hostWithoutPort === 'app.app.onetrueos.com' || hostWithoutPort.endsWith('.vercel.app')) {
 
     // Needed to support Vite dev server ONLY
     if (path.startsWith('/assets/')) {
