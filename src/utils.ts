@@ -1,49 +1,37 @@
-const hostsToRegex = (hostPatterns: string[]): RegExp => {
-  let combinedRegex = '(' + hostPatterns.join('|') + ')'
-  return new RegExp(combinedRegex)
+import pm from 'picomatch'
+
+const removeLeadingSlash = (path: string) => path.replace(/^\/+/, '')
+
+const appPath = (path: string) => {
+  if (path.startsWith('/assets/')) return '/static' + path
+  if (path.startsWith('/static/')) return path
+  return path === '/' ? '/app' : '/app/' + removeLeadingSlash(path)
 }
 
-const removeLeadingSlash = (path: string): string => {
-  return path.replace(/^\/+/, '')
+const instancePath = (host: string, path: string) => {
+  const slug = host.split('.')[0]
+  return '/instance/' + slug + '/' + removeLeadingSlash(path)
 }
 
-export const pathFromHostnameAndPath = (
-  hostname: string,
-  path: string
-): string => {
-  // Extract hostname without port
-  const hostWithoutPort = hostname.split(':')[0];
-  
-  // Instance subdomain: subdomain.app.dev.onetrueos.com or subdomain.app.onetrueos.com (but NOT app)
-  const instanceMatch = hostWithoutPort.match(/^([a-z0-9]+)\.app(?:\.dev)?\.onetrueos\.com$/);
-  if (instanceMatch && instanceMatch[1] !== 'app') {
-    return '/instance/' + instanceMatch[1] + '/' + removeLeadingSlash(path);
-  }
-  
-  // Landing page
-  if (hostWithoutPort === 'www.onetrueos.com') {
-    return '/www'
-  }
+const rules: [ReturnType<typeof pm>, (host: string, path: string) => string][] = [
+  [pm('www.onetrueos.com'),           (_h, _p) => '/www'],
+  [pm('onetrueos.com'),               (_h, _p) => '/www-redirect'],
+  [pm('app.app.onetrueos.com'),       (_h, p)  => appPath(p)],
+  [pm('app.dev.onetrueos.com'),       (_h, p)  => appPath(p)],
+  [pm('app.app.dev.onetrueos.com'),   (_h, p)  => appPath(p)],
+  [pm('global-os-git-*-philip-petersons-projects.vercel.app'), (_h, _p) => '/vercel-git-redirect'],
+  [pm('*.vercel.app'),                (_h, p)  => appPath(p)],
+  [pm('*.app.onetrueos.com'),         (h, p)   => instancePath(h, p)],
+  [pm('*.app.dev.onetrueos.com'),     (h, p)   => instancePath(h, p)],
+]
 
-  // Apex redirect to www
-  if (hostWithoutPort === 'onetrueos.com') {
-    return '/www-redirect'
+export const pathFromHostnameAndPath = (hostname: string, path: string): string => {
+  const host = hostname.split(':')[0]
+
+  for (const [match, handler] of rules) {
+    if (match(host)) return handler(host, path)
   }
 
-  // App domains: app.dev.onetrueos.com (dev), app.app.onetrueos.com (prod), global-os.vercel.app + any *.vercel.app preview URLs
-  if (hostWithoutPort === 'app.dev.onetrueos.com' || hostWithoutPort == 'app.app.dev.onetrueos.com' || hostWithoutPort === 'app.app.onetrueos.com' || hostWithoutPort.endsWith('.vercel.app')) {
-
-    // Needed to support Vite dev server ONLY
-    if (path.startsWith('/assets/')) {
-      return '/static' + path
-    }
-
-    if (path.startsWith('/static/')) {
-      return path
-    }
-    return path === '/' ? '/app' : '/app/' + removeLeadingSlash(path);
-  }
-  
-  // Fallback for unrecognized domains (e.g., Vercel preview URLs)
+  // Fallback for unrecognized domains
   return path
 }

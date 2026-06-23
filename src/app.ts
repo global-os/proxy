@@ -36,6 +36,7 @@ app.get('/www', async (c) => {
 })
 
 app.get('/www-redirect', (c) => c.redirect('https://www.onetrueos.com', 301))
+app.get('/vercel-git-redirect', (c) => c.redirect('https://app.app.onetrueos.com', 301))
 
 app.get('/health', (c) => c.json({ status: 'ok' }))
 
