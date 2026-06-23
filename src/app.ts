@@ -108,12 +108,30 @@ app.post('/app/api/sessions', async (c) => {
 
 const frontendDist = path.join(process.cwd(), 'src/frontend/dist')
 
-app.use(
-  '/assets/*',
-  serveStatic({
-    root: frontendDist,
+const assetContentTypes: Record<string, string> = {
+  '.js': 'application/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.json': 'application/json; charset=utf-8',
+}
+
+app.get('/assets/*', async (c) => {
+  const relativePath = c.req.path.replace(/^\//, '')
+  const filePath = path.join(frontendDist, relativePath)
+
+  if (!filePath.startsWith(frontendDist) || !fs.existsSync(filePath)) {
+    console.error('Asset not found:', relativePath, 'cwd:', process.cwd())
+    return c.notFound()
+  }
+
+  const ext = path.extname(filePath)
+  const contentType = assetContentTypes[ext] ?? 'application/octet-stream'
+
+  return c.body(fs.readFileSync(filePath), 200, {
+    'Content-Type': contentType,
+    'Cache-Control': 'public, max-age=31536000, immutable',
   })
-)
+})
 
 app.use(
   '/static/*',

@@ -35,9 +35,15 @@ export default defineConfig({
   },
   build: {
     manifest: true,
+    target: 'es2020',
     commonjsOptions: {
       include: [/node_modules/],
       transformMixedEsModules: true,
+    },
+    rollupOptions: {
+      output: {
+        format: 'es',
+      },
     },
   },
   optimizeDeps: {

@@ -1,10 +1,25 @@
 {
+  "buildCommand": "npm run vercel-build",
+  "installCommand": "npm install",
+  "framework": null,
+  "outputDirectory": "public",
   "functions": {
     "api/index.ts": {
       "maxDuration": 30,
-      "includeFiles": "src/frontend/dist/**,src/landing.html"
+      "includeFiles": "src/frontend/dist/index.html,src/landing.html"
     }
   },
+  "headers": [
+    {
+      "source": "/assets/(.*)\\.js",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/javascript; charset=utf-8"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/api/index" }
   ]
