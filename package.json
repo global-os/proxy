@@ -15,7 +15,7 @@
     "start": "node dist/src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "format": "prettier -w src/frontend/src/**/*.{ts,tsx} **/*.{ts,tsx} ./drizzle.config.ts",
-    "vercel-build": "npm install && (cd src/frontend && npm install) && npm run build"
+    "vercel-build": "npm install && (cd src/frontend && npm install --legacy-peer-deps) && npm run build"
   },
   "version": "1.0.0",
   "description": "",

@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
-import rewriteAll from 'vite-plugin-rewrite-all';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
@@ -19,7 +18,7 @@ export default defineConfig({
         next();
       });
     }
-  }, rewriteAll(), tanstackRouter({
+  }, tanstackRouter({
     target: 'react',
     autoCodeSplitting: true
   }), react()],
