@@ -29,6 +29,12 @@ const app = new Hono<Env>({
 
 app.use(logger())
 
+app.get('/www', async (c) => {
+  const htmlPath = path.join(process.cwd(), 'src/landing.html')
+  const html = fs.readFileSync(htmlPath, 'utf-8')
+  return c.html(html)
+})
+
 app.get('/health', (c) => c.json({ status: 'ok' }))
 
 app.use(

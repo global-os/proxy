@@ -20,8 +20,13 @@ export const pathFromHostnameAndPath = (
     return '/instance/' + instanceMatch[1] + '/' + removeLeadingSlash(path);
   }
   
-  // App domains: app.dev.onetrueos.com (dev), app.app.onetrueos.com (prod)
-  if (hostWithoutPort === 'app.dev.onetrueos.com' || hostWithoutPort == 'app.app.dev.onetrueos.com' || hostWithoutPort === 'app.app.onetrueos.com') {
+  // Landing page
+  if (hostWithoutPort === 'www.onetrueos.com' || hostWithoutPort === 'onetrueos.com') {
+    return '/www'
+  }
+
+  // App domains: app.dev.onetrueos.com (dev), app.app.onetrueos.com (prod), global-os.vercel.app
+  if (hostWithoutPort === 'app.dev.onetrueos.com' || hostWithoutPort == 'app.app.dev.onetrueos.com' || hostWithoutPort === 'app.app.onetrueos.com' || hostWithoutPort === 'global-os.vercel.app') {
 
     // Needed to support Vite dev server ONLY
     if (path.startsWith('/assets/')) {

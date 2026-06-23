@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GlobalOS — Your workspace. Anywhere globally.</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .fade-slide {
+      animation: fadeSlide 0.5s ease-in-out;
+    }
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-white min-h-screen flex flex-col">
+
+  <!-- Nav -->
+  <nav class="px-8 py-6 flex items-center justify-between max-w-6xl mx-auto w-full">
+    <span class="text-lg font-semibold tracking-tight">GlobalOS</span>
+    <a
+      href="https://app.app.onetrueos.com"
+      class="text-sm text-slate-400 hover:text-white transition-colors"
+    >Sign in →</a>
+  </nav>
+
+  <!-- Hero -->
+  <main class="flex-1 flex flex-col items-center justify-center text-center px-6 -mt-16">
+    <h1 class="text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight leading-tight max-w-3xl">
+      Your workspace.<br />Anywhere globally.
+    </h1>
+
+    <p class="mt-8 text-xl sm:text-2xl text-slate-400 font-light">
+      Run tasks, access your documents, from
+      <span id="rotating" class="text-white font-medium"></span>
+    </p>
+
+    <a
+      href="https://app.app.onetrueos.com"
+      class="mt-12 inline-block bg-white text-slate-950 font-semibold px-8 py-4 rounded-full text-base hover:bg-slate-100 transition-colors"
+    >
+      Get started
+    </a>
+  </main>
+
+  <!-- Footer -->
+  <footer class="px-8 py-6 text-center text-slate-600 text-sm">
+    © 2026 GlobalOS
+  </footer>
+
+  <script>
+    const phrases = ['public computers', 'your laptop', 'your phone', 'the cloud']
+    let i = 0
+    const el = document.getElementById('rotating')
+
+    function tick() {
+      el.classList.remove('fade-slide')
+      void el.offsetWidth // reflow to restart animation
+      el.textContent = phrases[i % phrases.length]
+      el.classList.add('fade-slide')
+      i++
+    }
+
+    tick()
+    setInterval(tick, 2500)
+  </script>
+</body>
+</html>

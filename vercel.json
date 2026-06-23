@@ -2,7 +2,7 @@
   "functions": {
     "api/index.ts": {
       "maxDuration": 30,
-      "includeFiles": "src/frontend/dist/**"
+      "includeFiles": "src/frontend/dist/**,src/landing.html"
     }
   },
   "rewrites": [
