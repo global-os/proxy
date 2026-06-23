@@ -13,7 +13,7 @@ const instancePath = (host: string, path: string) => {
 }
 
 const rules: [ReturnType<typeof pm>, (host: string, path: string) => string][] = [
-  [pm('www.onetrueos.com'),           (_h, _p) => '/www'],
+  [pm('www.onetrueos.com'),           (_h, p)  => p === '/' ? '/www' : p],
   [pm('onetrueos.com'),               (_h, _p) => '/www-redirect'],
   [pm('app.app.onetrueos.com'),       (_h, p)  => appPath(p)],
   [pm('app.dev.onetrueos.com'),       (_h, p)  => appPath(p)],
