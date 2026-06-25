@@ -9,12 +9,12 @@ export type AuthType = {
   }
 }
 
-const AUTH_HANDLER_TIMEOUT_MS = 20_000
+const AUTH_HANDLER_TIMEOUT_MS = 8_000
 
 async function handleAuth(c: Context) {
   if (!isDatabaseConfigured()) {
     return c.json(
-      { message: 'Server misconfigured: DATABASE_URL is not set on Vercel.' },
+      { message: 'Server misconfigured: database is not configured.' },
       503
     )
   }
@@ -23,10 +23,7 @@ async function handleAuth(c: Context) {
     setTimeout(() => {
       resolve(
         Response.json(
-          {
-            message:
-              'Authentication timed out. The database is likely unreachable — verify DATABASE_URL on Vercel.',
-          },
+          { message: 'Authentication timed out. The database may be unreachable.' },
           { status: 504 }
         )
       )
