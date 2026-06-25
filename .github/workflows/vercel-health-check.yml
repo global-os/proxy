@@ -18,6 +18,9 @@ jobs:
     name: "Vercel - PROXY: health"
     runs-on: ubuntu-latest
     steps:
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
       - name: Resolve deployment URL
         id: deployment
         env:
@@ -63,24 +66,22 @@ jobs:
 
       - name: Check /health
         id: check
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           set -euo pipefail
           BASE="${{ steps.deployment.outputs.url }}"
           echo "Checking ${BASE}/health"
 
           for i in $(seq 1 12); do
-            BODY_FILE="$(mktemp)"
-            HTTP_CODE=$(curl -sS -L --max-time 30 \
-              -H "x-vercel-protection-bypass: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}" \
-              -o "$BODY_FILE" -w "%{http_code}" "${BASE}/health")
-            echo "Attempt ${i}: HTTP ${HTTP_CODE}"
+            BODY=$(vercel curl "${BASE}/health" 2>/dev/null || true)
+            echo "Attempt ${i}: ${BODY}"
 
-            if [ "$HTTP_CODE" = "200" ] && jq -e '.status == "ok" and .database.ok == true' "$BODY_FILE" > /dev/null 2>&1; then
+            if echo "$BODY" | jq -e '.status == "ok" and .database.ok == true' > /dev/null 2>&1; then
               echo "Health check passed"
               exit 0
             fi
 
-            cat "$BODY_FILE"
             [ "$i" -lt 12 ] && echo "Retrying in 10s..." && sleep 10
           done
 
