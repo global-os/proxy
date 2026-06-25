@@ -1,5 +1,3 @@
-import fs from 'fs'
-import path from 'path'
 import { Pool, Client, type PoolConfig } from 'pg'
 import { drizzle } from 'drizzle-orm/node-postgres'
 
@@ -53,15 +51,7 @@ function buildPoolConfig(): PoolConfig {
   }
 
   if (sslEnabled) {
-    const caPath = path.join(process.cwd(), 'certs/ca.pem')
-    try {
-      const ca = fs.readFileSync(caPath, 'utf-8')
-      console.log('SSL: loaded CA cert from', caPath)
-      config.ssl = { rejectUnauthorized: true, ca }
-    } catch (e) {
-      console.warn('SSL: CA cert not found at', caPath, '— disabling rejectUnauthorized')
-      config.ssl = { rejectUnauthorized: false }
-    }
+    config.ssl = { rejectUnauthorized: true }
   }
 
   if (process.env.DATABASE_IPV4 === 'true') {
