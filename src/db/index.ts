@@ -16,6 +16,10 @@ function resolveDatabaseUrl(): string | undefined {
     if (!/[?&]sslmode=/i.test(result)) {
       result += (result.includes('?') ? '&' : '?') + 'sslmode=require'
     }
+    result = result.replace(/([?&])sslrootcert=[^&]*/i, '$1sslrootcert=disable')
+    if (!/[?&]sslrootcert=/i.test(result)) {
+      result += (result.includes('?') ? '&' : '?') + 'sslrootcert=disable'
+    }
   }
 
   if (!result.includes('connect_timeout=')) {
