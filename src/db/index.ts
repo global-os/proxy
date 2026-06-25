@@ -53,10 +53,13 @@ function buildPoolConfig(): PoolConfig {
   }
 
   if (sslEnabled) {
+    const caPath = path.join(process.cwd(), 'certs/ca.pem')
     try {
-      const ca = fs.readFileSync(path.join(process.cwd(), 'certs/ca.pem'), 'utf-8')
+      const ca = fs.readFileSync(caPath, 'utf-8')
+      console.log('SSL: loaded CA cert from', caPath)
       config.ssl = { rejectUnauthorized: true, ca }
-    } catch {
+    } catch (e) {
+      console.warn('SSL: CA cert not found at', caPath, '— disabling rejectUnauthorized')
       config.ssl = { rejectUnauthorized: false }
     }
   }
