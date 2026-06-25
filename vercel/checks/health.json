@@ -1,0 +1,12 @@
+{
+  "name": "Health Check",
+  "requires": "deployment-url",
+  "blocks": "deployment-alias",
+  "targets": ["production"],
+  "timeout": 120,
+  "source": {
+    "kind": "git-provider",
+    "provider": "github",
+    "externalCheckName": "Vercel - PROXY: health"
+  }
+}
