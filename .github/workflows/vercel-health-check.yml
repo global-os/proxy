@@ -20,14 +20,46 @@ jobs:
     steps:
       - name: Resolve deployment URL
         id: deployment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
           if [ -n "${{ github.event.inputs.deployment_url }}" ]; then
             RAW="${{ github.event.inputs.deployment_url }}"
-          else
-            RAW="app.app.onetrueos.com"
+            [[ "$RAW" == https://* ]] || RAW="https://${RAW}"
+            echo "url=$RAW" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
-          [[ "$RAW" == https://* ]] || RAW="https://${RAW}"
-          echo "url=$RAW" >> "$GITHUB_OUTPUT"
+
+          echo "Looking up Vercel deployment for SHA ${{ github.sha }}..."
+
+          for i in $(seq 1 24); do
+            RESPONSE=$(curl -sf \
+              -H "Authorization: Bearer $VERCEL_TOKEN" \
+              "https://api.vercel.com/v6/deployments?projectId=prj_YzDbpigPcAjP3uOJc6OiU0jmdopH&teamId=team_xx5yJzNru2p4zBytKd4iyRQ1&limit=10")
+
+            URL=$(echo "$RESPONSE" | jq -r \
+              '.deployments[] | select(.meta.githubCommitSha == "${{ github.sha }}") | .url' \
+              | head -1)
+
+            if [ -n "$URL" ] && [ "$URL" != "null" ]; then
+              STATE=$(echo "$RESPONSE" | jq -r \
+                '.deployments[] | select(.url == "'"$URL"'") | .state' \
+                | head -1)
+              echo "Attempt $i: found $URL (state: $STATE)"
+
+              if [ "$STATE" = "READY" ]; then
+                echo "url=https://$URL" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+            else
+              echo "Attempt $i: no deployment found yet..."
+            fi
+
+            [ "$i" -lt 24 ] && sleep 15
+          done
+
+          echo "Timed out waiting for Vercel deployment to be ready"
+          exit 1
 
       - name: Check /health
         id: check
@@ -36,7 +68,7 @@ jobs:
           BASE="${{ steps.deployment.outputs.url }}"
           echo "Checking ${BASE}/health"
 
-          for i in $(seq 1 24); do
+          for i in $(seq 1 12); do
             BODY_FILE="$(mktemp)"
             HTTP_CODE=$(curl -sS -L --max-time 30 \
               -o "$BODY_FILE" -w "%{http_code}" "${BASE}/health")
@@ -48,13 +80,13 @@ jobs:
             fi
 
             cat "$BODY_FILE"
-            [ "$i" -lt 24 ] && echo "Retrying in 10s..." && sleep 10
+            [ "$i" -lt 12 ] && echo "Retrying in 10s..." && sleep 10
           done
 
-          echo "Health check failed after 24 attempts"
+          echo "Health check failed after 12 attempts"
           exit 1
 
-      - name: Report check to Vercel
+      - name: Report check
         if: always() && github.event_name == 'push'
         uses: actions/github-script@v7
         with:
@@ -68,6 +100,8 @@ jobs:
               conclusion: '${{ steps.check.outcome }}' === 'success' ? 'success' : 'failure',
               output: {
                 title: 'Health Check',
-                summary: '${{ steps.check.outcome }}' === 'success' ? '/health returned ok' : '/health check failed',
+                summary: '${{ steps.check.outcome }}' === 'success'
+                  ? '/health ok on ${{ steps.deployment.outputs.url }}'
+                  : '/health failed on ${{ steps.deployment.outputs.url }}',
               }
             });
