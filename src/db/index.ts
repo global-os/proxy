@@ -13,9 +13,25 @@ function resolveDatabaseUrl(): string | undefined {
   return `${url}${joiner}connect_timeout=10`
 }
 
+function sslModeFromUrl(url: string | undefined): 'disable' | 'require' | null {
+  if (!url) return null
+  const match = url.match(/(?:^|[?&])sslmode=([^&]+)/i)
+  if (!match) return null
+  const mode = decodeURIComponent(match[1]).toLowerCase()
+  if (mode === 'disable') return 'disable'
+  if (['require', 'verify-ca', 'verify-full', 'prefer'].includes(mode)) return 'require'
+  return null
+}
+
 function buildPoolConfig(): PoolConfig {
   const connectionString = resolveDatabaseUrl()
-  const sslEnabled = process.env.DATABASE_SSL !== 'false'
+  const urlSslMode = sslModeFromUrl(connectionString)
+  const sslEnabled =
+    process.env.DATABASE_SSL === 'true' || urlSslMode === 'require'
+      ? true
+      : process.env.DATABASE_SSL === 'false' || urlSslMode === 'disable'
+        ? false
+        : true
 
   const config: PoolConfig = {
     connectionString,
