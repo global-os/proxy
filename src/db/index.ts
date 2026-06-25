@@ -64,6 +64,17 @@ function buildPoolConfig(): PoolConfig {
 // Create connection pool
 export const pool = new Pool(buildPoolConfig())
 
+pool.on('error', (err) => {
+  console.error('Pool error:', err.message)
+})
+
+// Pre-warm pool connection so auth requests don't hit a cold connection
+pool.query('SELECT 1').then(() => {
+  console.log('Pool pre-warm: ok')
+}).catch((err) => {
+  console.error('Pool pre-warm failed:', err.message)
+})
+
 export const db = drizzle({ schema, client: pool })
 
 export function isDatabaseConfigured(): boolean {
