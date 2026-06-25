@@ -20,10 +20,12 @@ jobs:
         id: deployment
         run: |
           if [ -n "${{ github.event.inputs.deployment_url }}" ]; then
-            echo "url=${{ github.event.inputs.deployment_url }}" >> "$GITHUB_OUTPUT"
+            RAW="${{ github.event.inputs.deployment_url }}"
           else
-            echo "url=${{ github.event.client_payload.url }}" >> "$GITHUB_OUTPUT"
+            RAW="${{ github.event.client_payload.url }}"
           fi
+          [[ "$RAW" == https://* ]] || RAW="https://${RAW}"
+          echo "url=$RAW" >> "$GITHUB_OUTPUT"
 
       - name: Check /health
         id: check
@@ -33,7 +35,7 @@ jobs:
           echo "Checking ${BASE}/health"
 
           BODY_FILE="$(mktemp)"
-          HTTP_CODE=$(curl -sS --max-time 30 -o "$BODY_FILE" -w "%{http_code}" "${BASE}/health")
+          HTTP_CODE=$(curl -sS -L --max-time 30 -o "$BODY_FILE" -w "%{http_code}" "${BASE}/health")
           echo "HTTP ${HTTP_CODE}"
           cat "$BODY_FILE"
 
