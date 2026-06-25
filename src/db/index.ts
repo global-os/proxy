@@ -8,9 +8,21 @@ const isServerless = Boolean(process.env.VERCEL)
 function resolveDatabaseUrl(): string | undefined {
   const url = process.env.DATABASE_URL?.trim()
   if (!url) return undefined
-  if (url.includes('connect_timeout=')) return url
-  const joiner = url.includes('?') ? '&' : '?'
-  return `${url}${joiner}connect_timeout=10`
+
+  let result = url
+
+  if (process.env.DATABASE_SSL === 'true') {
+    result = result.replace(/([?&])sslmode=[^&]*/i, '$1sslmode=require')
+    if (!/[?&]sslmode=/i.test(result)) {
+      result += (result.includes('?') ? '&' : '?') + 'sslmode=require'
+    }
+  }
+
+  if (!result.includes('connect_timeout=')) {
+    result += (result.includes('?') ? '&' : '?') + 'connect_timeout=10'
+  }
+
+  return result
 }
 
 function sslModeFromUrl(url: string | undefined): 'disable' | 'require' | null {
