@@ -41,7 +41,9 @@ async function handleAuth(c: Context) {
   })
 
   const result = await Promise.race([
-    auth.handler(c.req.raw).then(r => { clearInterval(interval); console.log(`[auth] done ${path} → ${r.status} in ${Date.now() - start}ms`); return r }),
+    auth.handler(c.req.raw)
+      .then(r => { clearInterval(interval); console.log(`[auth] done ${path} → ${r.status} in ${Date.now() - start}ms`); return r })
+      .catch(err => { clearInterval(interval); console.error(`[auth] error ${path}:`, err?.message ?? err); return Response.json({ message: 'Authentication failed.' }, { status: 500 }) }),
     timeoutResponse,
   ])
   return result
