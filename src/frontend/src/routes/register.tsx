@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { authErrorMessage, signUp } from '../lib/auth-client'
+import { authErrorMessage, runAuthAction, signUp } from '../lib/auth-client'
 import { Page } from '../components/Page'
 import { VerticalFrame } from '../components/VerticalFrame'
 import { PageTitle } from '../components/PageTitle'
@@ -28,15 +28,19 @@ function RouteComponent() {
       return
     }
 
-    await signUp.email(
-      { email, password, name, roles: ['STUDENT'] },
-      {
-        onSuccess: () => {
-          setError(null)
-          navigate({ to: '/' })
-        },
-        onError: (ctx) => setError(authErrorMessage(ctx)),
-      }
+    await runAuthAction(
+      () =>
+        signUp.email(
+          { email, password, name, roles: ['STUDENT'] },
+          {
+            onSuccess: () => {
+              setError(null)
+              navigate({ to: '/' })
+            },
+            onError: (ctx) => setError(authErrorMessage(ctx)),
+          }
+        ),
+      setError
     )
   }
 

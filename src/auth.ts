@@ -7,6 +7,7 @@ export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL ?? 'https://app.app.onetrueos.com',
   basePath: '/api/auth',
+  telemetry: { enabled: false },
   database: drizzleAdapter(db, {
     provider: 'pg',
   }),

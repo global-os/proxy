@@ -71,8 +71,10 @@ export const selectTargetHost: MiddlewareHandler<Env> = async (c, next) => {
 
 // Middleware: Log the proxied request
 export const logRequest: MiddlewareHandler<Env> = async (c, next) => {
-  const targetHost = c.get('targetHost')
-  console.log(`Proxying: ${c.req.path} -> https://${targetHost}${c.req.path}`)
+  if (!isAuthApiPath(c.req.path)) {
+    const targetHost = c.get('targetHost')
+    console.log(`Proxying: ${c.req.path} -> https://${targetHost}${c.req.path}`)
+  }
   await next()
 }
 

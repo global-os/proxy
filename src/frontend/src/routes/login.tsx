@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from '@tanstack/react-router'
-import { authErrorMessage, signIn } from '../lib/auth-client'
+import { authErrorMessage, runAuthAction, signIn } from '../lib/auth-client'
 import { useState } from 'react'
 import { VerticalFrame } from '../components/VerticalFrame'
 import { Page } from '../components/Page'
@@ -22,43 +22,55 @@ function RouteComponent() {
     e.preventDefault()
     setError(null)
 
-    await signIn.email(
-      { email: usernameOrEmail, password },
-      {
-        onSuccess: () => {
-          setError(null)
-          navigate({ to: '/' })
-        },
-        onError: handleAuthError,
-      }
+    await runAuthAction(
+      () =>
+        signIn.email(
+          { email: usernameOrEmail, password },
+          {
+            onSuccess: () => {
+              setError(null)
+              navigate({ to: '/' })
+            },
+            onError: handleAuthError,
+          }
+        ),
+      setError
     )
   }
 
   const handleGoogleLogin = async () => {
     setError(null)
-    await signIn.social(
-      { provider: 'google' },
-      {
-        onSuccess: () => {
-          setError(null)
-          navigate({ to: '/' })
-        },
-        onError: handleAuthError,
-      }
+    await runAuthAction(
+      () =>
+        signIn.social(
+          { provider: 'google' },
+          {
+            onSuccess: () => {
+              setError(null)
+              navigate({ to: '/' })
+            },
+            onError: handleAuthError,
+          }
+        ),
+      setError
     )
   }
 
   const handleGithubLogin = async () => {
     setError(null)
-    await signIn.social(
-      { provider: 'github' },
-      {
-        onSuccess: () => {
-          setError(null)
-          navigate({ to: '/' })
-        },
-        onError: handleAuthError,
-      }
+    await runAuthAction(
+      () =>
+        signIn.social(
+          { provider: 'github' },
+          {
+            onSuccess: () => {
+              setError(null)
+              navigate({ to: '/' })
+            },
+            onError: handleAuthError,
+          }
+        ),
+      setError
     )
   }
 

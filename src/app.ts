@@ -13,6 +13,7 @@ import { replaceDomainInHTML } from './replace.js'
 import { pathFromHostnameAndPath } from './utils.js'
 import authRoutes from './routes/auth.js'
 import fsRoutes from './routes/fs.js'
+import { pingDatabase } from './db/index.js'
 
 const app = new Hono<Env>({
   getPath(request, options) {
@@ -50,7 +51,13 @@ app.get('/www-assets/*', async (c) => {
 app.get('/www-redirect', (c) => c.redirect('https://www.onetrueos.com', 301))
 app.get('/vercel-git-redirect', (c) => c.redirect('https://app.app.onetrueos.com', 301))
 
-app.get('/health', (c) => c.json({ status: 'ok' }))
+app.get('/health', async (c) => {
+  const db = await pingDatabase()
+  return c.json({
+    status: db.ok ? 'ok' : 'degraded',
+    database: db,
+  }, db.ok ? 200 : 503)
+})
 
 app.use(
   '/instance/**',

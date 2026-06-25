@@ -32,6 +32,10 @@ type AuthErrorContext = {
 }
 
 export function authErrorMessage(ctx: AuthErrorContext): string {
+  const err = ctx.error as (AuthErrorContext['error'] & { error?: unknown }) | undefined
+  if (err?.message?.includes('Fetch related error') && err.error) {
+    return authErrorFromUnknown(err.error)
+  }
   if (ctx.error?.message) return ctx.error.message
 
   if (ctx.responseText) {
@@ -55,4 +59,43 @@ export function authErrorMessage(ctx: AuthErrorContext): string {
   }
 
   return 'Something went wrong. Please try again.'
+}
+
+export function authErrorFromUnknown(err: unknown): string {
+  if (err && typeof err === 'object' && 'error' in err) {
+    const nested = authErrorMessage(err as AuthErrorContext)
+    if (nested !== 'Something went wrong. Please try again.') return nested
+  }
+
+  if (err instanceof TypeError) {
+    const msg = err.message.toLowerCase()
+    if (msg.includes('network') || msg.includes('fetch')) {
+      return 'Network error — could not reach the server. Check your connection and try again.'
+    }
+  }
+
+  if (err instanceof Error) {
+    const msg = err.message.toLowerCase()
+    if (msg.includes('networkerror') || msg.includes('failed to fetch')) {
+      return 'Network error — could not reach the server. Check your connection and try again.'
+    }
+    if (err.message) return err.message
+  }
+
+  return 'Something went wrong. Please try again.'
+}
+
+export async function runAuthAction(
+  action: () => Promise<unknown>,
+  setError: (message: string) => void,
+): Promise<void> {
+  try {
+    const result = await action()
+    if (result && typeof result === 'object' && 'error' in result) {
+      const error = (result as { error?: AuthErrorContext['error'] }).error
+      if (error) setError(authErrorMessage({ error }))
+    }
+  } catch (err) {
+    setError(authErrorFromUnknown(err))
+  }
 }
