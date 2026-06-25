@@ -67,6 +67,9 @@ export const pool = new Pool(buildPoolConfig())
 pool.on('error', (err) => {
   console.error('Pool error:', err.message)
 })
+pool.on('connect', () => console.log('Pool: new connection established'))
+pool.on('acquire', () => console.log('Pool: connection acquired'))
+pool.on('remove', () => console.log('Pool: connection removed'))
 
 export const db = drizzle({ schema, client: pool })
 

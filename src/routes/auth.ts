@@ -19,8 +19,12 @@ async function handleAuth(c: Context) {
     )
   }
 
+  const path = new URL(c.req.url).pathname
+  console.log(`[auth] start ${path}`)
+
   const timeoutResponse = new Promise<Response>((resolve) => {
     setTimeout(() => {
+      console.log(`[auth] timeout after ${AUTH_HANDLER_TIMEOUT_MS}ms: ${path}`)
       resolve(
         Response.json(
           { message: 'Authentication timed out. The database may be unreachable.' },
@@ -30,7 +34,11 @@ async function handleAuth(c: Context) {
     }, AUTH_HANDLER_TIMEOUT_MS)
   })
 
-  return Promise.race([auth.handler(c.req.raw), timeoutResponse])
+  const result = await Promise.race([
+    auth.handler(c.req.raw).then(r => { console.log(`[auth] done ${path} → ${r.status}`); return r }),
+    timeoutResponse,
+  ])
+  return result
 }
 
 const router = new Hono<{ Bindings: AuthType }>({ strict: false })
