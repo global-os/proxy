@@ -20,10 +20,16 @@ async function handleAuth(c: Context) {
   }
 
   const path = new URL(c.req.url).pathname
+  const start = Date.now()
   console.log(`[auth] start ${path}`)
+
+  const interval = setInterval(() => {
+    console.log(`[auth] still waiting ${Date.now() - start}ms: ${path}`)
+  }, 2_000)
 
   const timeoutResponse = new Promise<Response>((resolve) => {
     setTimeout(() => {
+      clearInterval(interval)
       console.log(`[auth] timeout after ${AUTH_HANDLER_TIMEOUT_MS}ms: ${path}`)
       resolve(
         Response.json(
@@ -35,7 +41,7 @@ async function handleAuth(c: Context) {
   })
 
   const result = await Promise.race([
-    auth.handler(c.req.raw).then(r => { console.log(`[auth] done ${path} → ${r.status}`); return r }),
+    auth.handler(c.req.raw).then(r => { clearInterval(interval); console.log(`[auth] done ${path} → ${r.status} in ${Date.now() - start}ms`); return r }),
     timeoutResponse,
   ])
   return result
