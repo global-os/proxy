@@ -1,12 +1,13 @@
 name: Vercel Health Check
 
 on:
-  deployment_status:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       deployment_url:
         description: Deployment URL to check (without trailing slash)
-        required: true
+        required: false
         type: string
 
 permissions:
@@ -16,7 +17,6 @@ jobs:
   health:
     name: "Vercel - PROXY: health"
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || github.event.deployment_status.state == 'success'
     steps:
       - name: Resolve deployment URL
         id: deployment
@@ -24,7 +24,7 @@ jobs:
           if [ -n "${{ github.event.inputs.deployment_url }}" ]; then
             RAW="${{ github.event.inputs.deployment_url }}"
           else
-            RAW="${{ github.event.deployment_status.environment_url }}"
+            RAW="global-os-git-main-philip-petersons-projects.vercel.app"
           fi
           [[ "$RAW" == https://* ]] || RAW="https://${RAW}"
           echo "url=$RAW" >> "$GITHUB_OUTPUT"
@@ -56,7 +56,7 @@ jobs:
           exit 1
 
       - name: Report check to Vercel
-        if: always() && github.event_name == 'deployment_status'
+        if: always() && github.event_name == 'push'
         uses: actions/github-script@v7
         with:
           script: |
@@ -64,7 +64,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               name: 'Vercel - PROXY: health',
-              head_sha: context.payload.deployment.sha,
+              head_sha: context.sha,
               status: 'completed',
               conclusion: '${{ steps.check.outcome }}' === 'success' ? 'success' : 'failure',
               output: {
