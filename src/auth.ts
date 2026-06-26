@@ -1,6 +1,7 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { ServerClient } from 'postmark'
+import { optionalNameSignUpPlugin } from './auth/plugins/optional-name-signup.js'
 import { hashPassword, verifyPassword } from './crypto/password.js'
 import { db } from './db/index.js'
 import * as schema from './db/schema.js'
@@ -10,6 +11,7 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL ?? 'https://app.app.onetrueos.com',
   basePath: '/api/auth',
   telemetry: { enabled: false },
+  plugins: [optionalNameSignUpPlugin()],
   database: drizzleAdapter(db, {
     provider: 'pg',
     schema: {

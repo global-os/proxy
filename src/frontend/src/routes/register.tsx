@@ -31,7 +31,12 @@ function RouteComponent() {
     await runAuthAction(
       () =>
         signUp.email(
-          { email, password, name, roles: ['STUDENT'] },
+          {
+            email,
+            password,
+            ...(name.trim() ? { name: name.trim() } : {}),
+            roles: ['STUDENT'],
+          },
           {
             onSuccess: () => {
               setError(null)

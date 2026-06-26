@@ -27,8 +27,30 @@ export type Session = typeof authClient.$Infer.Session
 export type User = typeof authClient.$Infer.Session.user
 
 type AuthErrorContext = {
-  error?: { message?: string; status?: number }
+  error?: { message?: string; status?: number; code?: string }
   responseText?: string
+}
+
+const AUTH_FIELD_LABELS: Record<string, string> = {
+  name: 'Name',
+  email: 'Email',
+  password: 'Password',
+  image: 'Image',
+  callbackURL: 'Callback URL',
+}
+
+function humanizeAuthError(message: string): string {
+  const match = message.match(/^\[body\.([^\]]+)\]\s*(.+)$/)
+  if (!match) return message
+
+  const [, field, detail] = match
+  const label = AUTH_FIELD_LABELS[field] ?? field.charAt(0).toUpperCase() + field.slice(1)
+
+  if (/too small|>=1 characters/i.test(detail)) {
+    return `${label} is required.`
+  }
+
+  return `${label}: ${detail}`
 }
 
 export function authErrorMessage(ctx: AuthErrorContext): string {
@@ -36,12 +58,12 @@ export function authErrorMessage(ctx: AuthErrorContext): string {
   if (err?.message?.includes('Fetch related error') && err.error) {
     return authErrorFromUnknown(err.error)
   }
-  if (ctx.error?.message) return ctx.error.message
+  if (ctx.error?.message) return humanizeAuthError(ctx.error.message)
 
   if (ctx.responseText) {
     try {
-      const parsed = JSON.parse(ctx.responseText) as { message?: string }
-      if (parsed.message) return parsed.message
+      const parsed = JSON.parse(ctx.responseText) as { message?: string; code?: string }
+      if (parsed.message) return humanizeAuthError(parsed.message)
     } catch {
       if (ctx.responseText.includes('FUNCTION_INVOCATION_TIMEOUT')) {
         return 'Server timed out. Please try again in a moment.'
