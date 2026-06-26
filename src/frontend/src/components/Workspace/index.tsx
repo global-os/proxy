@@ -1,9 +1,10 @@
 import { createComponent } from 'react-fela'
 import { useQuery } from '@tanstack/react-query'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { WorkspaceProps } from './types'
 import { useWorkspace } from './useWorkspace'
 import { WorkspaceWindow } from './WorkspaceWindow'
+import { useSessionKernel } from '../../kernel/useSessionKernel'
 
 export type { WorkspaceActions } from './types'
 
@@ -103,11 +104,63 @@ const computeX = (x: number, width: number) =>
 const computeY = (y: number, height: number) =>
   (window as any).innerHeight / 2 - height / 2 + y
 
+type ServerWindow = {
+  id: number
+  processId: number
+  instanceId: number
+  title: string
+  bundleName: string
+  x: number
+  y: number
+  width: number
+  height: number
+  zIndex: number
+  src: string
+}
+
+const serverWindowToAppWindow = (win: ServerWindow) => ({
+  id: win.id,
+  zIndex: win.zIndex,
+  title: win.title,
+  bundleName: win.bundleName,
+  width: win.width,
+  height: win.height,
+  x: win.x,
+  y: win.y,
+  src: win.src,
+  instanceId: win.instanceId,
+  processId: win.processId,
+})
+
 export function Workspace({ sessionId, children }: WorkspaceProps) {
   const { state, onMouseDown, onMouseUp, onMouseMove, actions } = useWorkspace(
     children.onStartup
   )
   const [launchMessage, setLaunchMessage] = useState<string | null>(null)
+  const { bindWindow } = useSessionKernel(sessionId)
+
+  const hydratedSession = useRef<string | null>(null)
+
+  const { data: sessionWindows } = useQuery<ServerWindow[]>({
+    queryKey: ['session-windows', sessionId],
+    queryFn: async () => {
+      const r = await fetch(`/api/sessions/${sessionId}/windows`, {
+        credentials: 'include',
+      })
+      if (!r.ok) return []
+      return r.json()
+    },
+  })
+
+  useEffect(() => {
+    hydratedSession.current = null
+  }, [sessionId])
+
+  useEffect(() => {
+    if (!sessionWindows || hydratedSession.current === sessionId) return
+    hydratedSession.current = sessionId
+    actions.setWindows(sessionWindows.map(serverWindowToAppWindow))
+  }, [sessionId, sessionWindows, actions])
 
   const { data: desktopItems = [] } = useQuery<DesktopItem[]>({
     queryKey: ['desktop'],
@@ -149,27 +202,21 @@ export function Workspace({ sessionId, children }: WorkspaceProps) {
       }
 
       const result = (await r.json()) as {
-        url: string
-        instanceId: number
-        processId: number
+        action: 'focus' | 'open'
+        window: ServerWindow
       }
 
-      const offset = state.windows.length * 24
-      actions.openWindow({
-        title: item.name.replace(/\.gapp$/, ''),
-        width: 720,
-        height: 480,
-        x: offset,
-        y: offset,
-        src: result.url,
-        instanceId: result.instanceId,
-        processId: result.processId,
-      })
+      const appWindow = serverWindowToAppWindow(result.window)
+      if (result.action === 'focus') {
+        actions.focusWindow(appWindow.id, appWindow.zIndex)
+      } else {
+        actions.openWindow(appWindow)
+      }
       setLaunchMessage(null)
     } catch (err) {
       setLaunchMessage(err instanceof Error ? err.message : 'Launch failed')
     }
-  }, [actions, sessionId, state.windows.length])
+  }, [actions, sessionId])
 
   return (
     <Frame onMouseMove={onMouseMove} onMouseUp={onMouseUp}>
@@ -198,6 +245,7 @@ export function Workspace({ sessionId, children }: WorkspaceProps) {
           left={computeX(win.x, win.width) + 'px'}
           top={computeY(win.y, win.height) + 'px'}
           onMouseDown={onMouseDown}
+          onIframeRef={el => bindWindow(win, el)}
         />
       ))}
     </Frame>

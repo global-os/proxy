@@ -1,21 +1,21 @@
-import { and, eq } from 'drizzle-orm'
-import { hashDir } from '../db/file.js'
-import { getOrCreateImage } from '../db/image.js'
-import { db } from '../db/index.js'
-import * as schema from '../db/schema.js'
-import { instancePublicUrl } from '../runtime/constants.js'
 import {
-  findRunningInstanceForDirectory,
-  startInstanceRuntime,
-  touchInstance,
-} from '../runtime/instance-manager.js'
+  ensurePrimaryInstance,
+  findOrCreateProcess,
+} from './create-instance.js'
+import { requireLaunchableApp, requireWorkspaceSession } from './session-access.js'
+import {
+  createWindow,
+  focusWindow,
+  listProcessWindows,
+  type WorkspaceWindowDto,
+} from './window-service.js'
 
 export type LaunchResult = {
   processId: number
   instanceId: number
   url: string
-  state: 'running' | 'starting'
-  reused: boolean
+  action: 'focus' | 'open'
+  window: WorkspaceWindowDto
 }
 
 export async function launchProgram(opts: {
@@ -26,94 +26,48 @@ export async function launchProgram(opts: {
 }): Promise<LaunchResult> {
   const { userId, sessionId, directoryId, directoryName } = opts
 
-  const [workspaceSession] = await db
-    .select({ id: schema.sessions.id })
-    .from(schema.sessions)
-    .where(and(
-      eq(schema.sessions.id, sessionId),
-      eq(schema.sessions.user_id, userId),
-    ))
-    .limit(1)
+  await requireWorkspaceSession(userId, sessionId)
+  await requireLaunchableApp(userId, directoryId)
 
-  if (!workspaceSession) {
-    throw new LaunchError('Workspace session not found', 404)
-  }
+  const processRow = await findOrCreateProcess(sessionId, directoryId)
+  const { instanceId, url } = await ensurePrimaryInstance(processRow.id)
 
-  const [appDir] = await db
-    .select({ id: schema.directory.id, name: schema.directory.name })
-    .from(schema.directory)
-    .where(and(
-      eq(schema.directory.id, directoryId),
-      eq(schema.directory.user_id, userId),
-    ))
-    .limit(1)
+  const bundleName = directoryName.endsWith('.gapp') ? directoryName : `${directoryName}.gapp`
+  const title = bundleName.replace(/\.gapp$/, '')
+  const existingWindows = await listProcessWindows(sessionId, processRow.id)
 
-  if (!appDir) {
-    throw new LaunchError('App not found on desktop', 404)
-  }
-
-  if (!appDir.name.endsWith('.gapp')) {
-    throw new LaunchError('Only .gapp bundles can be launched', 400)
-  }
-
-  const directory_checksum = await hashDir(directoryId)
-  const image = await getOrCreateImage(directoryId)
-
-  const existing = await findRunningInstanceForDirectory(sessionId, directoryId, directory_checksum)
-  if (existing) {
-    await touchInstance(existing.id)
+  if (existingWindows.length > 0) {
+    const frontmost = existingWindows[0]
+    const focused = (await focusWindow(sessionId, frontmost.id)) ?? frontmost
     return {
-      processId: existing.process_id,
-      instanceId: existing.id,
-      url: instancePublicUrl(existing.id),
-      state: 'running',
-      reused: true,
+      processId: processRow.id,
+      instanceId: focused.instanceId,
+      url: focused.src,
+      action: 'focus',
+      window: focused,
     }
   }
 
-  const [processRow] = await db
-    .insert(schema.process)
-    .values({
-      session_id: sessionId,
-      directory_id: directoryId,
-    })
-    .returning({ id: schema.process.id })
-
-  const [instanceRow] = await db
-    .insert(schema.instances)
-    .values({
-      process_id: processRow.id,
-      image_id: image.id,
-      directory_checksum,
-      state: 'starting',
-    })
-    .returning({ id: schema.instances.id })
-
-  await startInstanceRuntime(instanceRow.id, directory_checksum, image.tar_bytes!)
-
-  await db
-    .update(schema.instances)
-    .set({
-      state: 'running',
-      last_used_at: new Date(),
-    })
-    .where(eq(schema.instances.id, instanceRow.id))
+  const offset = 0
+  const opened = await createWindow({
+    sessionId,
+    processId: processRow.id,
+    instanceId,
+    title,
+    bundleName,
+    x: offset,
+    y: offset,
+    width: 720,
+    height: 480,
+  })
 
   return {
     processId: processRow.id,
-    instanceId: instanceRow.id,
-    url: instancePublicUrl(instanceRow.id),
-    state: 'running',
-    reused: false,
+    instanceId,
+    url: opened.src,
+    action: 'open',
+    window: opened,
   }
 }
 
-export class LaunchError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-  ) {
-    super(message)
-    this.name = 'LaunchError'
-  }
-}
+export { LaunchError } from './errors.js'

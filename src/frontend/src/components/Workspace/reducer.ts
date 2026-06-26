@@ -45,19 +45,43 @@ export function replaceNth<T>(arr: T[], n: number, replacement: T): T[] {
 export function reducer(state: State, action: WorkspaceAction): State {
   console.log('event', action.type)
   switch (action.type) {
-    case WorkspaceActionKind.OPEN_WINDOW: {
+    case WorkspaceActionKind.SET_WINDOWS: {
+      const maxZ = action.payload.reduce((m, w) => Math.max(m, w.zIndex), 0)
+      const maxId = action.payload.reduce((m, w) => Math.max(m, w.id), 0)
       return {
         ...state,
-        nextWindowID: state.nextWindowID + 1,
+        windows: action.payload,
+        zIndexCounter: maxZ + 1,
+        nextWindowID: maxId + 1,
+      }
+    }
+    case WorkspaceActionKind.OPEN_WINDOW: {
+      const id = action.payload.id ?? state.nextWindowID
+      const zIndex = action.payload.zIndex ?? state.zIndexCounter
+      return {
+        ...state,
+        nextWindowID: Math.max(state.nextWindowID, id + 1),
         windows: [
           ...state.windows,
           {
             ...action.payload,
-            id: state.nextWindowID,
-            zIndex: state.zIndexCounter,
+            id,
+            zIndex,
           },
         ],
-        zIndexCounter: state.zIndexCounter + 1,
+        zIndexCounter: Math.max(state.zIndexCounter, zIndex + 1),
+      }
+    }
+    case WorkspaceActionKind.FOCUS_WINDOW: {
+      const index = state.windows.findIndex(w => w.id === action.windowId)
+      if (index < 0) return state
+      return {
+        ...state,
+        windows: replaceNth(state.windows, index, {
+          ...state.windows[index],
+          zIndex: action.zIndex,
+        }),
+        zIndexCounter: action.zIndex + 1,
       }
     }
     case WorkspaceActionKind.DRAG_WINDOW: {

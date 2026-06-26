@@ -120,7 +120,9 @@ export const process = pgTable('process', {
   id: serial('id').primaryKey(),
   session_id: serial('session_id').notNull().references(() => sessions.id),
   directory_id: integer('directory_id').notNull().references(() => directory.id),
-});
+}, (table) => [
+  index('process_session_directory_uidx').on(table.session_id, table.directory_id),
+]);
 
 /** Live runtime for a process. Subdomain slug = instances.id */
 export const instances = pgTable('instances', {
@@ -133,6 +135,25 @@ export const instances = pgTable('instances', {
   created_at: timestamp('created_at').defaultNow().notNull(),
 }, (table) => [
   index('instances_process_id_idx').on(table.process_id),
+]);
+
+export const workspaceWindow = pgTable('workspace_window', {
+  id: serial('id').primaryKey(),
+  session_id: integer('session_id').notNull().references(() => sessions.id, { onDelete: 'cascade' }),
+  process_id: integer('process_id').notNull().references(() => process.id, { onDelete: 'cascade' }),
+  instance_id: integer('instance_id').notNull().references(() => instances.id, { onDelete: 'cascade' }),
+  title: text('title').notNull(),
+  bundle_name: text('bundle_name').notNull(),
+  x: integer('x').notNull().default(0),
+  y: integer('y').notNull().default(0),
+  width: integer('width').notNull().default(720),
+  height: integer('height').notNull().default(480),
+  z_index: integer('z_index').notNull().default(1),
+  last_focused_at: timestamp('last_focused_at').defaultNow().notNull(),
+  created_at: timestamp('created_at').defaultNow().notNull(),
+}, (table) => [
+  index('workspace_window_session_id_idx').on(table.session_id),
+  index('workspace_window_process_id_idx').on(table.process_id),
 ]);
 
 export const sessions = pgTable('sessions', {

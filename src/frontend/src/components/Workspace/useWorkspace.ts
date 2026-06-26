@@ -1,4 +1,4 @@
-import { MouseEvent, useCallback, useEffect, useReducer, useRef } from 'react'
+import { MouseEvent, useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
 import { reducer } from './reducer'
 import { ResizeHandle, State, WorkspaceActionKind, WorkspaceActions } from './types'
 
@@ -16,11 +16,17 @@ const initialState: State = {
 export function useWorkspace(onStartup?: (actions: WorkspaceActions) => void) {
   const [state, dispatch] = useReducer(reducer, initialState)
 
-  const actions: WorkspaceActions = {
+  const actions = useMemo<WorkspaceActions>(() => ({
     openWindow(windowSpec) {
       dispatch({ type: WorkspaceActionKind.OPEN_WINDOW, payload: windowSpec })
     },
-  }
+    setWindows(windows) {
+      dispatch({ type: WorkspaceActionKind.SET_WINDOWS, payload: windows })
+    },
+    focusWindow(windowId, zIndex) {
+      dispatch({ type: WorkspaceActionKind.FOCUS_WINDOW, windowId, zIndex })
+    },
+  }), [])
 
   const hasRun = useRef(false)
   useEffect(() => {

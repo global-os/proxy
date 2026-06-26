@@ -69,7 +69,7 @@ const StyledIframe = createComponent(
     pointerEvents: dragging ? 'none' : 'auto',
   }),
   'iframe',
-  ['src']
+  ['src', 'innerRef']
 )
 
 type Props = {
@@ -79,6 +79,7 @@ type Props = {
   left: string
   top: string
   onMouseDown: (e: MouseEvent) => void
+  onIframeRef?: (el: HTMLIFrameElement | null) => void
 }
 
 export function WorkspaceWindow({
@@ -88,6 +89,7 @@ export function WorkspaceWindow({
   left,
   top,
   onMouseDown,
+  onIframeRef,
 }: Props) {
   return (
     <Chrome
@@ -103,6 +105,7 @@ export function WorkspaceWindow({
       <StyledIframe
         dragging={isInteracting}
         src={win.src}
+        innerRef={onIframeRef}
       />
       <ResizeHandle
         cursor="nesw-resize"

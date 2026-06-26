@@ -1,6 +1,8 @@
 import { Hono } from 'hono'
 import * as middleware from '../middleware.js'
 import { LaunchError, launchProgram } from '../services/launch-program.js'
+import { requireWorkspaceSession } from '../services/session-access.js'
+import { listSessionWindows } from '../services/window-service.js'
 import { Env } from '../types.js'
 
 const router = new Hono<Env>()
@@ -12,6 +14,27 @@ router.use(
   middleware.betterAuthMiddleware,
   middleware.setRlsUser,
 )
+
+router.get('/sessions/:sessionId/windows', async (c) => {
+  const user = c.get('user')
+  if (!user) return c.json({ message: 'Unauthorized' }, 401)
+
+  const sessionId = Number.parseInt(c.req.param('sessionId'), 10)
+  if (!Number.isFinite(sessionId)) {
+    return c.json({ message: 'Invalid session id' }, 400)
+  }
+
+  try {
+    await requireWorkspaceSession(user.id, sessionId)
+    const windows = await listSessionWindows(sessionId)
+    return c.json(windows)
+  } catch (err) {
+    if (err instanceof LaunchError) {
+      return c.json({ message: err.message }, err.status as 404)
+    }
+    throw err
+  }
+})
 
 router.post('/sessions/:sessionId/launch', async (c) => {
   const user = c.get('user')

@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { db } from '../db/index.js'
 import * as schema from '../db/schema.js'
 import {
@@ -115,25 +115,3 @@ export async function ensureInstanceReady(instanceId: number): Promise<boolean> 
   return true
 }
 
-export async function findRunningInstanceForDirectory(
-  sessionId: number,
-  directoryId: number,
-  checksum: string,
-) {
-  const rows = await db
-    .select({
-      instance: schema.instances,
-      process: schema.process,
-    })
-    .from(schema.instances)
-    .innerJoin(schema.process, eq(schema.instances.process_id, schema.process.id))
-    .where(and(
-      eq(schema.process.session_id, sessionId),
-      eq(schema.process.directory_id, directoryId),
-      eq(schema.instances.directory_checksum, checksum),
-      eq(schema.instances.state, 'running'),
-    ))
-    .limit(1)
-
-  return rows[0]?.instance
-}
