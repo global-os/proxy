@@ -1,5 +1,5 @@
 import { createHash } from "crypto";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import * as tar from "tar";
 import { PassThrough, Readable } from "stream";
 import { db } from "./index.js";
@@ -70,6 +70,27 @@ export async function getOrCreateImage(directoryId: number): Promise<{
   tar_checksum: string
   tar_bytes: Buffer | null
 }> {
+  const [cached] = await db
+    .select({
+      id: image.id,
+      directory_checksum: image.directory_checksum,
+      tar_checksum: image.tar_checksum,
+      tar_bytes: image.tar_bytes,
+    })
+    .from(image)
+    .where(eq(image.directory_id, directoryId))
+    .orderBy(desc(image.id))
+    .limit(1)
+
+  if (cached?.tar_bytes && cached.directory_checksum && cached.tar_checksum) {
+    return {
+      id: cached.id,
+      directory_checksum: cached.directory_checksum,
+      tar_checksum: cached.tar_checksum,
+      tar_bytes: cached.tar_bytes,
+    }
+  }
+
   const directory_checksum = await hashDir(directoryId)
   const [existing] = await db
     .select({

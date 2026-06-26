@@ -1,10 +1,8 @@
-import { and, desc, eq } from 'drizzle-orm'
-import { hashDir } from '../db/file.js'
+import { and, desc, eq, inArray } from 'drizzle-orm'
 import { getOrCreateImage } from '../db/image.js'
 import { db } from '../db/index.js'
 import * as schema from '../db/schema.js'
 import { instancePublicUrl } from '../runtime/constants.js'
-import { startInstanceRuntime } from '../runtime/instance-manager.js'
 import { LaunchError } from './errors.js'
 
 export type CreatedInstance = {
@@ -28,7 +26,6 @@ export async function createInstanceForProcess(processId: number): Promise<Creat
     throw new LaunchError('Process not found', 404)
   }
 
-  const directory_checksum = await hashDir(processRow.directory_id)
   const image = await getOrCreateImage(processRow.directory_id)
 
   const [instanceRow] = await db
@@ -36,20 +33,10 @@ export async function createInstanceForProcess(processId: number): Promise<Creat
     .values({
       process_id: processId,
       image_id: image.id,
-      directory_checksum,
+      directory_checksum: image.directory_checksum,
       state: 'starting',
     })
     .returning({ id: schema.instances.id })
-
-  await startInstanceRuntime(instanceRow.id, directory_checksum, image.tar_bytes!)
-
-  await db
-    .update(schema.instances)
-    .set({
-      state: 'running',
-      last_used_at: new Date(),
-    })
-    .where(eq(schema.instances.id, instanceRow.id))
 
   return {
     instanceId: instanceRow.id,
@@ -60,20 +47,20 @@ export async function createInstanceForProcess(processId: number): Promise<Creat
 
 /** Ensure the process has a live primary instance, restarting a stopped one when possible. */
 export async function ensurePrimaryInstance(processId: number): Promise<CreatedInstance> {
-  const [running] = await db
+  const [live] = await db
     .select({ id: schema.instances.id })
     .from(schema.instances)
     .where(and(
       eq(schema.instances.process_id, processId),
-      eq(schema.instances.state, 'running'),
+      inArray(schema.instances.state, ['running', 'starting']),
     ))
     .orderBy(schema.instances.id)
     .limit(1)
 
-  if (running) {
+  if (live) {
     return {
-      instanceId: running.id,
-      url: instancePublicUrl(running.id),
+      instanceId: live.id,
+      url: instancePublicUrl(live.id),
       restarted: false,
     }
   }
@@ -81,7 +68,6 @@ export async function ensurePrimaryInstance(processId: number): Promise<CreatedI
   const [stopped] = await db
     .select({
       id: schema.instances.id,
-      directory_checksum: schema.instances.directory_checksum,
       image_id: schema.instances.image_id,
     })
     .from(schema.instances)
@@ -93,24 +79,15 @@ export async function ensurePrimaryInstance(processId: number): Promise<CreatedI
     .limit(1)
 
   if (stopped?.image_id) {
-    const [imageRow] = await db
-      .select({ tar_bytes: schema.image.tar_bytes })
-      .from(schema.image)
-      .where(eq(schema.image.id, stopped.image_id))
-      .limit(1)
+    await db
+      .update(schema.instances)
+      .set({ state: 'starting', last_used_at: new Date() })
+      .where(eq(schema.instances.id, stopped.id))
 
-    if (imageRow?.tar_bytes) {
-      await startInstanceRuntime(stopped.id, stopped.directory_checksum, imageRow.tar_bytes)
-      await db
-        .update(schema.instances)
-        .set({ state: 'running', last_used_at: new Date() })
-        .where(eq(schema.instances.id, stopped.id))
-
-      return {
-        instanceId: stopped.id,
-        url: instancePublicUrl(stopped.id),
-        restarted: true,
-      }
+    return {
+      instanceId: stopped.id,
+      url: instancePublicUrl(stopped.id),
+      restarted: true,
     }
   }
 

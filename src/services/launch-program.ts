@@ -25,12 +25,19 @@ export async function launchProgram(opts: {
   directoryName: string
 }): Promise<LaunchResult> {
   const { userId, sessionId, directoryId, directoryName } = opts
+  const start = Date.now()
+  const log = (step: string) => console.log(`[launch] ${step} +${Date.now() - start}ms`)
 
+  log('start')
   await requireWorkspaceSession(userId, sessionId)
+  log('session ok')
   await requireLaunchableApp(userId, directoryId)
+  log('app ok')
 
   const processRow = await findOrCreateProcess(sessionId, directoryId)
+  log(`process ${processRow.id}`)
   const { instanceId, url } = await ensurePrimaryInstance(processRow.id)
+  log(`instance ${instanceId}`)
 
   const bundleName = directoryName.endsWith('.gapp') ? directoryName : `${directoryName}.gapp`
   const title = bundleName.replace(/\.gapp$/, '')

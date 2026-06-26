@@ -46,7 +46,7 @@ function buildPoolConfig(): PoolConfig {
 
   const config: PoolConfig = {
     connectionString,
-    max: isServerless ? 1 : 10,
+    max: isServerless ? 3 : 10,
     idleTimeoutMillis: isServerless ? 1_000 : 30_000,
     connectionTimeoutMillis: isServerless ? 5_000 : 10_000,
     allowExitOnIdle: isServerless,

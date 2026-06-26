@@ -95,8 +95,11 @@ export async function ensureInstanceReady(instanceId: number): Promise<boolean> 
 
   if (!row) return false
 
-  if (row.state === 'running' && isInstanceContentCached(instanceId)) {
+  if (isInstanceContentCached(instanceId)) {
     await touchInstance(instanceId)
+    if (row.state !== 'running') {
+      await persistInstanceReady(instanceId)
+    }
     return true
   }
 
