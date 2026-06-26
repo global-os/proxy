@@ -20,6 +20,7 @@ import programsRoutes from './routes/programs.js'
 import { ensureInstanceReady, touchInstance } from './runtime/instance-manager.js'
 import { INSTANCE_MIME, resolveCachedInstanceFile } from './runtime/instance-content.js'
 import { instanceSlugFromHostname, stripInstancePrefix } from './runtime/instance-proxy.js'
+import { getBuildVersion } from './build-version.js'
 import { benchmarkScrypt } from './crypto/password.js'
 import { checkAuthTables, pingDatabase, pingPool, pool, probeDrizzleUserLookup, probeUserLookup } from './db/index.js'
 
@@ -40,7 +41,9 @@ app.use(logger())
 
 app.get('/www', async (c) => {
   const htmlPath = path.join(process.cwd(), 'src/landing.html')
-  const html = fs.readFileSync(htmlPath, 'utf-8')
+  const html = fs
+    .readFileSync(htmlPath, 'utf-8')
+    .replace('<!-- GLOBALOS_VERSION -->', getBuildVersion().label)
   return c.html(html)
 })
 

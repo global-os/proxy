@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 import createRenderer from '../lib/renderer'
 import { AnimationContext } from '../contexts/animation'
+import { VersionStamp } from '../components/VersionStamp'
 
 const createRenderResult = createRenderer()
 const queryClient = new QueryClient()
@@ -21,6 +22,7 @@ function RouteComponent() {
       <QueryClientProvider client={queryClient}>
         <AnimationContext value={createRenderResult.animations}>
           <Outlet />
+          <VersionStamp />
           <TanStackRouterDevtools />
         </AnimationContext>
       </QueryClientProvider>
