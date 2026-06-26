@@ -6,9 +6,9 @@ const meta: Meta = { component: SessionList, title: 'SessionList' }
 export default meta
 
 const SESSIONS = [
-  { id: 'abc123', name: 'My Work Session' },
-  { id: 'def456' },
-  { id: 'ghi789', name: 'Experiment' },
+  { id: 1, name: 'My Work Session', user_id: 'user-1' },
+  { id: 2, user_id: 'user-1' },
+  { id: 3, name: 'Experiment', user_id: 'user-1' },
 ]
 
 function seededClient(data: unknown) {

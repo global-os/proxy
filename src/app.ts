@@ -241,12 +241,21 @@ app.post('/app/api/sessions', async (c) => {
   const db = c.get('db')
   const user = c.get('user')
 
+  if (!user) {
+    return c.json({ message: 'Unauthorized' }, 401)
+  }
+
   await db.insert(schema.sessions).values({
-    user_id: user!.id,
+    user_id: user.id,
     name: 'bar',
   })
 
-  return c.body(null, 200)
+  const rows = await db
+    .select()
+    .from(schema.sessions)
+    .where(eq(schema.sessions.user_id, user.id))
+
+  return c.json(rows)
 })
 
 const frontendDist = path.join(process.cwd(), 'src/frontend/dist')

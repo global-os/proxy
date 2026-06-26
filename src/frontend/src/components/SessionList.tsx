@@ -1,58 +1,72 @@
 import { createComponent } from 'react-fela'
-import { useQuery, useMutation } from '@tanstack/react-query'
-import { useCallback } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useCallback, useState } from 'react'
 import { Tabs } from '@base-ui/react/tabs'
 
-const Container = createComponent(() => ({ }))
+const Container = createComponent(() => ({}))
 
 type Session = {
-  id: string
-  name?: string
+  id: number
+  name?: string | null
+  user_id: string
+}
+
+async function fetchSessions(): Promise<Session[]> {
+  const r = await fetch('/api/sessions')
+  if (!r.ok) {
+    throw new Error(`Failed to load sessions (${r.status})`)
+  }
+  return r.json()
+}
+
+async function createSession(): Promise<Session[]> {
+  const r = await fetch('/api/sessions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({}),
+  })
+  if (!r.ok) {
+    let message = `Failed to create session (${r.status})`
+    try {
+      const body = (await r.json()) as { message?: string }
+      if (body.message) message = body.message
+    } catch {
+      // ignore non-JSON error bodies
+    }
+    throw new Error(message)
+  }
+  return r.json()
 }
 
 export const SessionList = () => {
+  const queryClient = useQueryClient()
+  const [createError, setCreateError] = useState<string | null>(null)
+
   const { data, isPending, error } = useQuery<Session[]>({
     queryKey: ['sessions'],
-    queryFn: async () => {
-      const r = await fetch('/api/sessions')
-      const j = await r.json()
-      return j as Session[]
+    queryFn: fetchSessions,
+  })
+
+  const { isPending: isCreating, mutateAsync } = useMutation({
+    mutationKey: ['sessions', 'create'],
+    mutationFn: createSession,
+    onSuccess: (sessions) => {
+      queryClient.setQueryData(['sessions'], sessions)
+      setCreateError(null)
     },
   })
 
-  const { data: _mutData, isPending: _mutIsPending, error: _mutError, mutateAsync } = useMutation<Session[]>({
-    mutationKey: ['sessions'],
-    mutationFn: async () => {
-      const r = await fetch('/api/sessions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({})
-    })
-      const j = await r.json()
-      return j as Session[]
-    },
-  })
-
-//   const { isPending: _, isSuccess: __, error: _mutationError, mutateAsync } = useMutation({
-//     mutationFn: async (): Promise<undefined> => {
-// return axios.post('/todos', newTodo)
-//     }
-//   })
-
-  const createSession = useCallback(() => {
-    mutateAsync(undefined, {
-      onSuccess: () => {
-        console.info('success mutating')
-      },
-    }).then(() => {
-      console.info('finished mutating')
-    }).catch(() => {
-      console.error('errored mutating')
-    })
-  }, [])
+  const handleCreateSession = useCallback(async () => {
+    setCreateError(null)
+    try {
+      await mutateAsync()
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'Failed to create session')
+    }
+  }, [mutateAsync])
 
   if (isPending) {
     return <div>Loading...</div>
@@ -65,16 +79,10 @@ export const SessionList = () => {
   return (
     <Container>
       <Tabs.Root defaultValue="global-pc">
-        <Tabs.List >
-          <Tabs.Tab value="global-pc">
-            My Global PC
-          </Tabs.Tab>
-          <Tabs.Tab value="settings">
-            Settings
-          </Tabs.Tab>
-          <Tabs.Tab value="help">
-            Help
-          </Tabs.Tab>
+        <Tabs.List>
+          <Tabs.Tab value="global-pc">My Global PC</Tabs.Tab>
+          <Tabs.Tab value="settings">Settings</Tabs.Tab>
+          <Tabs.Tab value="help">Help</Tabs.Tab>
           <Tabs.Indicator />
         </Tabs.List>
         <Tabs.Panel value="global-pc">
@@ -88,15 +96,20 @@ export const SessionList = () => {
               </div>
             )
           })}
-          <button onClick={createSession}>Create New Session</button>
+          {createError && (
+            <p role="alert" style={{ color: '#b91c1c' }}>
+              {createError}
+            </p>
+          )}
+          <button onClick={handleCreateSession} disabled={isCreating}>
+            {isCreating ? 'Creating...' : 'Create New Session'}
+          </button>
         </Tabs.Panel>
-        <Tabs.Panel value="settings">
-          PI
-        </Tabs.Panel>
+        <Tabs.Panel value="settings">PI</Tabs.Panel>
         <Tabs.Panel value="help">
           For support, please send an email to{' '}
-          <a href="mailto:coldairnetworks@fastmail.com">coldairnetworks@fastmail.com</a>
-          {' '}and we will assist as soon as possible.
+          <a href="mailto:coldairnetworks@fastmail.com">coldairnetworks@fastmail.com</a>{' '}
+          and we will assist as soon as possible.
         </Tabs.Panel>
       </Tabs.Root>
     </Container>
