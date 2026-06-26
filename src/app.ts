@@ -51,31 +51,59 @@ app.get('/www-assets/*', async (c) => {
 app.get('/www-redirect', (c) => c.redirect('https://www.onetrueos.com', 301))
 app.get('/vercel-git-redirect', (c) => c.redirect('https://app.app.onetrueos.com', 301))
 
-app.get('/debug/pool', async (c) => {
-  const start = Date.now()
+app.get('/debug', async (c) => {
+  const poolStart = Date.now()
+  let poolOk = false, poolMs = 0, poolError: string | undefined, tables: string[] = []
+
   try {
     await Promise.race([
       pool.query('SELECT 1'),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('pool timed out after 10s')), 10_000)
-      ),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 10_000)),
     ])
-    return c.json({ ok: true, ms: Date.now() - start })
-  } catch (err) {
-    return c.json({ ok: false, ms: Date.now() - start, error: err instanceof Error ? err.message : String(err) }, 503)
-  }
-})
+    poolOk = true
+    poolMs = Date.now() - poolStart
 
-app.get('/debug/tables', async (c) => {
-  try {
     const result = await pool.query(`
       SELECT table_name FROM information_schema.tables
       WHERE table_schema = 'public' ORDER BY table_name
     `)
-    return c.json({ tables: result.rows.map((r: { table_name: string }) => r.table_name) })
+    tables = result.rows.map((r: { table_name: string }) => r.table_name)
   } catch (err) {
-    return c.json({ error: err instanceof Error ? err.message : String(err) }, 503)
+    poolMs = Date.now() - poolStart
+    poolError = err instanceof Error ? err.message : String(err)
   }
+
+  let migrations: { latest: string | null; count: number } | { error: string } = { latest: null, count: 0 }
+  try {
+    const m = await pool.query(`SELECT name FROM drizzle.__drizzle_migrations ORDER BY created_at DESC LIMIT 1`)
+    const count = await pool.query(`SELECT COUNT(*) FROM drizzle.__drizzle_migrations`)
+    migrations = { latest: m.rows[0]?.name ?? null, count: parseInt(count.rows[0].count) }
+  } catch {
+    try {
+      const m = await pool.query(`SELECT name FROM __drizzle_migrations ORDER BY created_at DESC LIMIT 1`)
+      const count = await pool.query(`SELECT COUNT(*) FROM __drizzle_migrations`)
+      migrations = { latest: m.rows[0]?.name ?? null, count: parseInt(count.rows[0].count) }
+    } catch (err2) {
+      migrations = { error: err2 instanceof Error ? err2.message : String(err2) }
+    }
+  }
+
+  const dbHost = (() => {
+    try { return new URL(process.env.DATABASE_URL!.replace(/^postgres(ql)?:\/\/[^@]+@/, 'https://')).hostname } catch { return null }
+  })()
+
+  return c.json({
+    pool: { ok: poolOk, ms: poolMs, ...(poolError ? { error: poolError } : {}) },
+    tables,
+    migrations,
+    env: {
+      DATABASE_SSL: process.env.DATABASE_SSL,
+      NODE_TLS_REJECT_UNAUTHORIZED: process.env.NODE_TLS_REJECT_UNAUTHORIZED,
+      DATABASE_URL_SET: !!process.env.DATABASE_URL,
+      dbHost,
+      nodeVersion: process.version,
+    },
+  }, poolOk ? 200 : 503)
 })
 
 app.get('/health', async (c) => {
