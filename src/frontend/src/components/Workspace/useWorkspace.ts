@@ -13,7 +13,7 @@ const initialState: State = {
   zIndexCounter: 1,
 }
 
-export function useWorkspace(onStartup: (actions: WorkspaceActions) => void) {
+export function useWorkspace(onStartup?: (actions: WorkspaceActions) => void) {
   const [state, dispatch] = useReducer(reducer, initialState)
 
   const actions: WorkspaceActions = {
@@ -24,10 +24,10 @@ export function useWorkspace(onStartup: (actions: WorkspaceActions) => void) {
 
   const hasRun = useRef(false)
   useEffect(() => {
-    if (hasRun.current) return
+    if (hasRun.current || !onStartup) return
     hasRun.current = true
     onStartup(actions)
-  }, [])
+  }, [onStartup])
 
   const onMouseDown = useCallback((event: MouseEvent) => {
     const target = event.target as HTMLElement
@@ -81,5 +81,5 @@ export function useWorkspace(onStartup: (actions: WorkspaceActions) => void) {
     [state.dragOrigin, state.resizeOrigin]
   )
 
-  return { state, onMouseDown, onMouseUp, onMouseMove }
+  return { state, actions, onMouseDown, onMouseUp, onMouseMove }
 }

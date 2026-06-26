@@ -102,7 +102,7 @@ export function WorkspaceWindow({
       </TitleBar>
       <StyledIframe
         dragging={isInteracting}
-        src="https://app.app.onetrueos.com/"
+        src={win.src}
       />
       <ResizeHandle
         cursor="nesw-resize"

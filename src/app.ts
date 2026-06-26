@@ -16,6 +16,10 @@ import { pathFromHostnameAndPath } from './utils.js'
 import { auth } from './auth.js'
 import authRoutes from './routes/auth.js'
 import fsRoutes from './routes/fs.js'
+import programsRoutes from './routes/programs.js'
+import { ensureInstanceReady, touchInstance } from './runtime/instance-manager.js'
+import { INSTANCE_MIME, resolveCachedInstanceFile } from './runtime/instance-content.js'
+import { instanceSlugFromHostname, stripInstancePrefix } from './runtime/instance-proxy.js'
 import { benchmarkScrypt } from './crypto/password.js'
 import { checkAuthTables, pingDatabase, pingPool, pool, probeDrizzleUserLookup, probeUserLookup } from './db/index.js'
 
@@ -184,19 +188,12 @@ app.get('/health', async (c) => {
 
 app.basePath('/app/api/auth').route('/', authRoutes)
 
-app.use(
-  '/instance/**',
-  middleware.provideDb,
-  middleware.parseCookies,
-  middleware.selectTargetHost,
-  middleware.logRequest
-)
+app.use('/instance/**', middleware.provideDb, middleware.setIsLocal, middleware.logRequest)
 
 app.use(
   '/app/**',
   middleware.provideDb,
   middleware.parseCookies,
-  middleware.unlessAuth(middleware.selectTargetHost),
   middleware.unlessAuth(middleware.betterAuthMiddleware),
   middleware.unlessAuth(middleware.setRlsUser),
   middleware.logRequest
@@ -206,12 +203,12 @@ app.use(
   '/app/api/sessions',
   middleware.provideDb,
   middleware.parseCookies,
-  middleware.selectTargetHost,
   middleware.betterAuthMiddleware,
   middleware.logRequest
 )
 
 app.basePath('/app/api/fs').route('/', fsRoutes)
+app.basePath('/app/api').route('/', programsRoutes)
 
 app.get('/app/api/sessions', async (c) => {
   console.log('=== GET /app/api/sessions ===')
@@ -294,82 +291,39 @@ app.use(
 )
 
 app.all('/instance/*', async (c) => {
-  const targetHost = c.get('targetHost')
   const url = new URL(c.req.url)
-  const host = url.host
+  const slug = instanceSlugFromHostname(url.hostname)
+  const instanceId = Number.parseInt(slug, 10)
 
-  const targetUrl = `https://${targetHost}${url.pathname}${url.search}`
-
-  const db = c.get('db')
-
-  try {
-    const requestHeaders: Record<string, string> = {}
-
-    c.req.raw.headers.forEach((value, key) => {
-      requestHeaders[key] = value
-    })
-
-    requestHeaders['host'] = targetHost
-
-    const hasBody = c.req.method !== 'GET' && c.req.method !== 'HEAD'
-
-    const fetchOptions: RequestInit = {
-      method: c.req.method,
-      headers: requestHeaders,
-      redirect: 'manual',
-    }
-
-    if (hasBody) {
-      const bodyData = await c.req.arrayBuffer()
-
-      if (bodyData.byteLength > 0) {
-        fetchOptions.body = bodyData
-      }
-    }
-
-    const response = await fetch(targetUrl, fetchOptions)
-
-    const responseHeaders = new Headers(response.headers)
-    responseHeaders.delete('content-encoding')
-    responseHeaders.delete('content-length')
-
-    responseHeaders.delete('content-security-policy')
-    responseHeaders.delete('content-security-policy-report-only')
-    responseHeaders.delete('x-frame-options')
-    responseHeaders.delete('strict-transport-security')
-
-    console.log(
-      'Set-Cookie headers:',
-      response.headers.getSetCookie?.() || 'none'
-    )
-
-    const init = {
-      status: response.status,
-      statusText: response.statusText,
-      headers: responseHeaders,
-    }
-
-    let nextResponse = new Response(response.body, init)
-
-    if (response.body) {
-      const text = await response.text()
-      const transformed = replaceDomainInHTML(
-        text,
-        targetHost,
-        host,
-        c.get('isLocal')
-      )
-
-      nextResponse = new Response(transformed, {
-        ...init,
-      })
-    }
-
-    return nextResponse
-  } catch (error) {
-    console.error('Proxy error:', error)
-    return c.text('Proxy error occurred', 500)
+  if (!Number.isFinite(instanceId)) {
+    return c.json({ message: 'Invalid instance' }, 400)
   }
+
+  const ready = await ensureInstanceReady(instanceId)
+  if (!ready) {
+    return c.json({ message: 'Instance not available' }, 502)
+  }
+
+  void touchInstance(instanceId).catch(() => {})
+
+  const upstreamPath = stripInstancePrefix(url.pathname, slug)
+  const filePath = resolveCachedInstanceFile(instanceId, upstreamPath)
+  if (!filePath) {
+    return c.notFound()
+  }
+
+  const ext = path.extname(filePath)
+  const contentType = INSTANCE_MIME[ext] ?? 'application/octet-stream'
+
+  console.log(`[instance] ${c.req.method} ${url.pathname} -> ${filePath}`)
+
+  if (contentType.includes('text/html')) {
+    const text = fs.readFileSync(filePath, 'utf-8')
+    const transformed = replaceDomainInHTML(text, 'localhost', url.host, c.get('isLocal'))
+    return c.html(transformed)
+  }
+
+  return c.body(fs.readFileSync(filePath), 200, { 'Content-Type': contentType })
 })
 
 ;['/app/*', '/app/**', '/app'].forEach((route) => {

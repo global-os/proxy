@@ -79,7 +79,11 @@ export const verification = pgTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
-export const processDomainTypeEnum = pgEnum('process_domain_type', ['proxy', 'local_exe']);
+export const instanceStateEnum = pgEnum('instance_state', [
+  'starting',
+  'running',
+  'stopped',
+]);
 
 export const directory = pgTable('directory', {
   id: serial('id').primaryKey(),
@@ -115,16 +119,21 @@ export const image = pgTable('image', {
 export const process = pgTable('process', {
   id: serial('id').primaryKey(),
   session_id: serial('session_id').notNull().references(() => sessions.id),
+  directory_id: integer('directory_id').notNull().references(() => directory.id),
 });
 
-export const processDomains = pgTable('process_domains', {
+/** Live runtime for a process. Subdomain slug = instances.id */
+export const instances = pgTable('instances', {
   id: serial('id').primaryKey(),
-  type: processDomainTypeEnum('type').notNull().default('proxy'),
-  slug: text('domain_slug').notNull(),
   process_id: integer('process_id').notNull().references(() => process.id),
-  cleartext: text('cleartext').notNull(),
   image_id: integer('image_id').references(() => image.id),
-});
+  directory_checksum: text('directory_checksum').notNull(),
+  state: instanceStateEnum('state').notNull().default('starting'),
+  last_used_at: timestamp('last_used_at').defaultNow().notNull(),
+  created_at: timestamp('created_at').defaultNow().notNull(),
+}, (table) => [
+  index('instances_process_id_idx').on(table.process_id),
+]);
 
 export const sessions = pgTable('sessions', {
   id: serial('id').primaryKey(),

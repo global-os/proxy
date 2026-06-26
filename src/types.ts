@@ -9,7 +9,6 @@ export type Env = {
   Variables: {
     db: NodePgDatabase<typeof schema>
     cookies: Record<string, string>
-    targetHost: string
     isLocal: boolean
     user: typeof auth.$Infer.Session.user | null
     session: typeof auth.$Infer.Session.session | null

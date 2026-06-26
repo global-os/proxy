@@ -9,16 +9,30 @@ const meta: Meta = {
 export default meta
 
 export const Empty: StoryObj = {
-  render: () => <Workspace>{{ onStartup: () => {} }}</Workspace>,
+  render: () => <Workspace sessionId="1">{{ onStartup: () => {} }}</Workspace>,
 }
 
 export const WithWindows: StoryObj = {
   render: () => (
-    <Workspace>
+    <Workspace sessionId="1">
       {{
         onStartup: (actions) => {
-          actions.openWindow({ title: 'Window 1', width: 400, height: 300, x: -200, y: -100 })
-          actions.openWindow({ title: 'Window 2', width: 350, height: 250, x: 150, y: 80 })
+          actions.openWindow({
+            title: 'Window 1',
+            width: 400,
+            height: 300,
+            x: -200,
+            y: -100,
+            src: 'https://example.com/',
+          })
+          actions.openWindow({
+            title: 'Window 2',
+            width: 350,
+            height: 250,
+            x: 150,
+            y: 80,
+            src: 'https://example.com/',
+          })
         },
       }}
     </Workspace>

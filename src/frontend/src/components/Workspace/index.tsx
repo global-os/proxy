@@ -1,5 +1,6 @@
 import { createComponent } from 'react-fela'
 import { useQuery } from '@tanstack/react-query'
+import { useCallback, useState } from 'react'
 import { WorkspaceProps } from './types'
 import { useWorkspace } from './useWorkspace'
 import { WorkspaceWindow } from './WorkspaceWindow'
@@ -12,6 +13,9 @@ type DesktopItem = {
   name: string
   mime_type?: string
 }
+
+const isLaunchableApp = (item: DesktopItem) =>
+  item.type === 'directory' && item.name.endsWith('.gapp')
 
 const Frame = createComponent(
   () => ({
@@ -38,16 +42,18 @@ const IconGrid = createComponent(
 )
 
 const IconBox = createComponent(
-  () => ({
+  ({ launchable }: { launchable?: boolean }) => ({
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     gap: '4px',
-    cursor: 'default',
+    cursor: launchable ? 'pointer' : 'default',
     userSelect: 'none',
     pointerEvents: 'auto',
+    opacity: launchable ? 1 : 0.85,
   }),
-  'div'
+  'div',
+  ['launchable', 'onClick']
 )
 
 const IconShape = createComponent(
@@ -76,16 +82,32 @@ const IconLabel = createComponent(
   'span'
 )
 
+const LaunchStatus = createComponent(
+  () => ({
+    position: 'absolute',
+    left: '16px',
+    bottom: '16px',
+    padding: '8px 12px',
+    borderRadius: '6px',
+    background: 'rgba(0,0,0,0.45)',
+    color: '#fff',
+    fontSize: '12px',
+    pointerEvents: 'none',
+  }),
+  'div'
+)
+
 const computeX = (x: number, width: number) =>
   (window as any).innerWidth / 2 - width / 2 + x
 
 const computeY = (y: number, height: number) =>
   (window as any).innerHeight / 2 - height / 2 + y
 
-export function Workspace({ children }: WorkspaceProps) {
-  const { state, onMouseDown, onMouseUp, onMouseMove } = useWorkspace(
+export function Workspace({ sessionId, children }: WorkspaceProps) {
+  const { state, onMouseDown, onMouseUp, onMouseMove, actions } = useWorkspace(
     children.onStartup
   )
+  const [launchMessage, setLaunchMessage] = useState<string | null>(null)
 
   const { data: desktopItems = [] } = useQuery<DesktopItem[]>({
     queryKey: ['desktop'],
@@ -96,16 +118,77 @@ export function Workspace({ children }: WorkspaceProps) {
     },
   })
 
+  const openProgram = useCallback(async (item: DesktopItem) => {
+    if (!isLaunchableApp(item)) return
+
+    setLaunchMessage(`Launching ${item.name}…`)
+    try {
+      const r = await fetch(`/api/sessions/${sessionId}/launch`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          directoryId: item.id,
+          directoryName: item.name,
+        }),
+      })
+
+      if (!r.ok) {
+        let message = `Launch failed (${r.status})`
+        try {
+          const body = (await r.json()) as { message?: string }
+          if (body.message) message = body.message
+        } catch {
+          // ignore
+        }
+        setLaunchMessage(message)
+        return
+      }
+
+      const result = (await r.json()) as {
+        url: string
+        instanceId: number
+        processId: number
+      }
+
+      const offset = state.windows.length * 24
+      actions.openWindow({
+        title: item.name.replace(/\.gapp$/, ''),
+        width: 720,
+        height: 480,
+        x: offset,
+        y: offset,
+        src: result.url,
+        instanceId: result.instanceId,
+        processId: result.processId,
+      })
+      setLaunchMessage(null)
+    } catch (err) {
+      setLaunchMessage(err instanceof Error ? err.message : 'Launch failed')
+    }
+  }, [actions, sessionId, state.windows.length])
+
   return (
     <Frame onMouseMove={onMouseMove} onMouseUp={onMouseUp}>
       <IconGrid>
-        {desktopItems.map(item => (
-          <IconBox key={`${item.type}-${item.id}`}>
-            <IconShape isDir={item.type === 'directory'} />
-            <IconLabel>{item.name}</IconLabel>
-          </IconBox>
-        ))}
+        {desktopItems.map(item => {
+          const launchable = isLaunchableApp(item)
+          return (
+            <IconBox
+              key={`${item.type}-${item.id}`}
+              launchable={launchable}
+              onClick={launchable ? () => void openProgram(item) : undefined}
+            >
+              <IconShape isDir={item.type === 'directory'} />
+              <IconLabel>{item.name}</IconLabel>
+            </IconBox>
+          )
+        })}
       </IconGrid>
+      {launchMessage && <LaunchStatus>{launchMessage}</LaunchStatus>}
       {state.windows.map((win, i) => (
         <WorkspaceWindow
           key={win.id}

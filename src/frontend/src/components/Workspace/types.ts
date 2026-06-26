@@ -17,6 +17,9 @@ export type WindowSpec = {
   height: number
   x: number
   y: number
+  src: string
+  instanceId?: number
+  processId?: number
 }
 
 export type AppWindow = {
@@ -27,6 +30,9 @@ export type AppWindow = {
   height: number
   x: number
   y: number
+  src: string
+  instanceId?: number
+  processId?: number
 }
 
 export enum WorkspaceActionKind {
@@ -75,7 +81,8 @@ export type WorkspaceActions = {
 }
 
 export type WorkspaceProps = {
+  sessionId: string
   children: {
-    onStartup: (actions: WorkspaceActions) => void
+    onStartup?: (actions: WorkspaceActions) => void
   }
 }

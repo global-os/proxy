@@ -3,7 +3,6 @@ import { drizzle } from 'drizzle-orm/node-postgres'
 import { db, pool } from './db/index.js'
 import { Env } from './types'
 import * as schema from './db/schema.js'
-import { eq } from 'drizzle-orm'
 import { auth } from './auth.js'
 
 export const isAuthApiPath = (path: string) =>
@@ -39,42 +38,15 @@ export const parseCookies: MiddlewareHandler<Env> = async (c, next) => {
   await next()
 }
 
-// Middleware: Select target host based on user cookie
-export const selectTargetHost: MiddlewareHandler<Env> = async (c, next) => {
-  const cookies = c.get('cookies')
-
+export const setIsLocal: MiddlewareHandler<Env> = async (c, next) => {
   const url = new URL(c.req.url)
-  const initialPart = url.host.split('.')[0]
-  const db = c.get('db')
-
-  // const newPath = pathFromHostnameAndPath(url.hostname, c.req.path)
-  // console.log('requested path is', newPath)
-
-  const rows = await db
-    .select()
-    .from(schema.processDomains)
-    .where(eq(schema.processDomains.slug, initialPart))
-
-  let targetHost = ''
-  if (rows.length === 1) {
-    targetHost = rows[0].cleartext
-  }
-
-  c.set('isLocal', false)
-  if (url.host === 'localhost' || url.host.startsWith('localhost:')) {
-    targetHost = 'news.ycombinator.com'
-    c.set('isLocal', true)
-  }
-
-  c.set('targetHost', targetHost)
+  c.set('isLocal', url.host === 'localhost' || url.host.startsWith('localhost:'))
   await next()
 }
 
-// Middleware: Log the proxied request
 export const logRequest: MiddlewareHandler<Env> = async (c, next) => {
-  if (!isAuthApiPath(c.req.path)) {
-    const targetHost = c.get('targetHost')
-    console.log(`Proxying: ${c.req.path} -> https://${targetHost}${c.req.path}`)
+  if (!isAuthApiPath(c.req.path) && c.req.path.startsWith('/instance/')) {
+    console.log(`Instance request: ${c.req.method} ${c.req.path}`)
   }
   await next()
 }

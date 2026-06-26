@@ -1,5 +1,5 @@
 import { createHash } from "crypto";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import * as tar from "tar";
 import { PassThrough, Readable } from "stream";
 import { db } from "./index.js";
@@ -62,6 +62,60 @@ async function buildTar(dirName: string, dirs: DirEntry[], files: FileEntry[]): 
 
   await new Promise<void>((resolve, reject) => out.on("finish", resolve).on("error", reject));
   return Buffer.concat(chunks);
+}
+
+export async function getOrCreateImage(directoryId: number): Promise<{
+  id: number
+  directory_checksum: string
+  tar_checksum: string
+  tar_bytes: Buffer | null
+}> {
+  const directory_checksum = await hashDir(directoryId)
+  const [existing] = await db
+    .select({
+      id: image.id,
+      directory_checksum: image.directory_checksum,
+      tar_checksum: image.tar_checksum,
+      tar_bytes: image.tar_bytes,
+    })
+    .from(image)
+    .where(and(
+      eq(image.directory_id, directoryId),
+      eq(image.directory_checksum, directory_checksum),
+    ))
+    .limit(1)
+
+  if (existing?.tar_bytes) {
+    return {
+      id: existing.id,
+      directory_checksum: existing.directory_checksum!,
+      tar_checksum: existing.tar_checksum!,
+      tar_bytes: existing.tar_bytes,
+    }
+  }
+
+  const id = await createImage(directoryId)
+  const [row] = await db
+    .select({
+      id: image.id,
+      directory_checksum: image.directory_checksum,
+      tar_checksum: image.tar_checksum,
+      tar_bytes: image.tar_bytes,
+    })
+    .from(image)
+    .where(eq(image.id, id))
+    .limit(1)
+
+  if (!row?.tar_bytes) {
+    throw new Error(`Image ${id} was created without tar bytes`)
+  }
+
+  return {
+    id: row.id,
+    directory_checksum: row.directory_checksum!,
+    tar_checksum: row.tar_checksum!,
+    tar_bytes: row.tar_bytes,
+  }
 }
 
 export async function createImage(directoryId: number): Promise<number> {
