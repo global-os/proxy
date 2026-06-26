@@ -22,7 +22,8 @@ import { INSTANCE_MIME, resolveCachedInstanceFile } from './runtime/instance-con
 import { instanceSlugFromHostname, stripInstancePrefix } from './runtime/instance-proxy.js'
 import { getBuildVersion } from './build-version.js'
 import { benchmarkScrypt } from './crypto/password.js'
-import { checkAuthTables, pingDatabase, pingPool, pool, probeDrizzleUserLookup, probeUserLookup } from './db/index.js'
+import { checkAppTables, checkAuthTables, pingDatabase, pingPool, pool, probeDrizzleUserLookup, probeUserLookup } from './db/index.js'
+import { checkConfig, checkFrontendBundle, probeAuthHandler } from './health-checks.js'
 
 const app = new Hono<Env>({
   getPath(request, options) {
@@ -183,20 +184,42 @@ app.get('/debug', async (c) => {
 })
 
 app.get('/health', async (c) => {
-  const [direct, pooled, authTables, userLookup] = await Promise.all([
+  const config = checkConfig()
+  const frontend = checkFrontendBundle()
+
+  const [direct, pooled, authTables, appTables, userLookup, authProbe] = await Promise.all([
     pingDatabase(),
     pingPool(),
     checkAuthTables(),
+    checkAppTables(),
     probeUserLookup(),
+    probeAuthHandler(c.req.url),
   ])
-  const ok = direct.ok && pooled.ok && authTables.ok && userLookup.ok
-  return c.json({
-    status: ok ? 'ok' : 'degraded',
-    database: direct,
-    pool: pooled,
-    authTables,
-    userLookup,
-  }, ok ? 200 : 503)
+
+  const ok =
+    config.ok &&
+    frontend.ok &&
+    direct.ok &&
+    pooled.ok &&
+    authTables.ok &&
+    appTables.ok &&
+    userLookup.ok &&
+    authProbe.ok
+
+  return c.json(
+    {
+      status: ok ? 'ok' : 'degraded',
+      config,
+      frontend,
+      database: direct,
+      pool: pooled,
+      authTables,
+      appTables,
+      userLookup,
+      authProbe,
+    },
+    ok ? 200 : 503
+  )
 })
 
 app.basePath('/app/api/auth').route('/', authRoutes)

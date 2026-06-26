@@ -179,6 +179,46 @@ export async function probeUserLookup(
   }
 }
 
+export async function checkAppTables(
+  timeoutMs = 5_000,
+): Promise<
+  PingResult & {
+    tables?: { verification: boolean; instances: boolean; workspace_window: boolean }
+  }
+> {
+  if (!isDatabaseConfigured()) {
+    return { ok: false, error: 'DATABASE_URL is not set', ms: 0 }
+  }
+
+  const start = Date.now()
+  try {
+    const result = await withTimeout(
+      pool.query<{ verification: boolean; instances: boolean; workspace_window: boolean }>(
+        `SELECT
+          to_regclass('public.verification') IS NOT NULL AS verification,
+          to_regclass('public.instances') IS NOT NULL AS instances,
+          to_regclass('public.workspace_window') IS NOT NULL AS "workspace_window"`
+      ),
+      timeoutMs,
+      'App table check'
+    )
+    const tables = result.rows[0]
+    const ok = Boolean(tables?.verification && tables?.instances && tables?.workspace_window)
+    if (!ok) {
+      return {
+        ok: false,
+        error: 'App tables are missing. Run pending migrations against this database.',
+        ms: Date.now() - start,
+        tables,
+      }
+    }
+    return { ok: true, ms: Date.now() - start, tables }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'App table check failed'
+    return { ok: false, error: message, ms: Date.now() - start }
+  }
+}
+
 export async function checkAuthTables(timeoutMs = 5_000): Promise<PingResult & { tables?: { user: boolean; account: boolean; session: boolean } }> {
   if (!isDatabaseConfigured()) {
     return { ok: false, error: 'DATABASE_URL is not set', ms: 0 }
