@@ -1,6 +1,7 @@
-import { Hono } from 'hono'
+import { Hono, type Context } from 'hono'
 import { auth } from '../auth.js'
 import { isDatabaseConfigured } from '../db/index.js'
+import { buildBufferedRequest } from '../utils/read-body.js'
 
 export type AuthType = {
   Variables: {
@@ -11,9 +12,7 @@ export type AuthType = {
 
 const AUTH_HANDLER_TIMEOUT_MS = 15_000
 
-const router = new Hono<{ Bindings: AuthType }>({ strict: false })
-
-router.on(['POST', 'GET'], '/*', async (c) => {
+async function handleAuth(c: Context) {
   if (!isDatabaseConfigured()) {
     return c.json(
       { message: 'Server misconfigured: database is not configured.' },
@@ -25,13 +24,26 @@ router.on(['POST', 'GET'], '/*', async (c) => {
   const start = Date.now()
   console.log(`[auth] start ${path} honoPath=${c.req.path}`)
 
+  let request: Request
+  try {
+    const bodyStart = Date.now()
+    request = await buildBufferedRequest(c)
+    console.log(`[auth] body ready in ${Date.now() - bodyStart}ms: ${path}`)
+  } catch (err) {
+    console.error(`[auth] body read failed ${path}:`, err)
+    return c.json(
+      { message: err instanceof Error ? err.message : 'Failed to read request body.' },
+      400
+    )
+  }
+
   const interval = setInterval(() => {
     console.log(`[auth] still waiting ${Date.now() - start}ms: ${path}`)
   }, 2_000)
 
   try {
     const response = await Promise.race([
-      auth.handler(c.req.raw),
+      auth.handler(request),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('timeout')), AUTH_HANDLER_TIMEOUT_MS)
       ),
@@ -55,6 +67,10 @@ router.on(['POST', 'GET'], '/*', async (c) => {
     console.error(`[auth] error ${path}:`, message)
     return c.json({ message: 'Authentication failed.' }, 500)
   }
-})
+}
+
+const router = new Hono<{ Bindings: AuthType }>({ strict: false })
+
+router.on(['POST', 'GET'], '/*', (c) => handleAuth(c))
 
 export default router
