@@ -13,6 +13,7 @@ import { replaceDomainInHTML } from './replace.js'
 import { pathFromHostnameAndPath } from './utils.js'
 import authRoutes from './routes/auth.js'
 import fsRoutes from './routes/fs.js'
+import { benchmarkScrypt } from './crypto/password.js'
 import { checkAuthTables, pingDatabase, pingPool, pool, probeDrizzleUserLookup, probeUserLookup } from './db/index.js'
 
 const app = new Hono<Env>({
@@ -92,15 +93,17 @@ app.get('/debug', async (c) => {
     try { return new URL(process.env.DATABASE_URL!.replace(/^postgres(ql)?:\/\/[^@]+@/, 'https://')).hostname } catch { return null }
   })()
 
-  const [userLookup, drizzleUserLookup] = await Promise.all([
+  const [userLookup, drizzleUserLookup, scrypt] = await Promise.all([
     probeUserLookup(),
     probeDrizzleUserLookup(),
+    benchmarkScrypt(),
   ])
 
   return c.json({
     pool: { ok: poolOk, ms: poolMs, ...(poolError ? { error: poolError } : {}) },
     userLookup,
     drizzleUserLookup,
+    scrypt,
     tables,
     migrations,
     env: {

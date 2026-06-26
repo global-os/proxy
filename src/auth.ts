@@ -1,6 +1,7 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { ServerClient } from 'postmark'
+import { hashPassword, verifyPassword } from './crypto/password.js'
 import { db } from './db/index.js'
 import * as schema from './db/schema.js'
 
@@ -33,6 +34,10 @@ export const auth = betterAuth({
   ],
   emailAndPassword: {
     enabled: true,
+    password: {
+      hash: hashPassword,
+      verify: verifyPassword,
+    },
     sendResetPassword: async ({ user, url }) => {
       if (!process.env.POSTMARK_SERVER_TOKEN) {
         console.log(`[DEV] Password reset link for ${user.email}:\n${url}`)

@@ -33,7 +33,7 @@ async function handleAuth(c: Context) {
       console.log(`[auth] timeout after ${AUTH_HANDLER_TIMEOUT_MS}ms: ${path}`)
       resolve(
         Response.json(
-          { message: 'Authentication timed out waiting for the database. Check /health — pool and auth table checks must pass.' },
+          { message: 'Authentication timed out. If /health is ok, password hashing may be too slow on this runtime — retry after deploy or contact support.' },
           { status: 504 }
         )
       )
