@@ -12,7 +12,6 @@ router.use(
   middleware.provideDb,
   middleware.parseCookies,
   middleware.betterAuthMiddleware,
-  middleware.setRlsUser,
 )
 
 router.get('/sessions/:sessionId/windows', async (c) => {
@@ -32,7 +31,8 @@ router.get('/sessions/:sessionId/windows', async (c) => {
     if (err instanceof LaunchError) {
       return c.json({ message: err.message }, err.status as 404)
     }
-    throw err
+    console.error('[windows]', err)
+    return c.json({ message: 'Failed to load windows' }, 500)
   }
 })
 
