@@ -1,4 +1,6 @@
 import fs from 'fs'
+import type { HttpBindings } from '@hono/node-server'
+import type { IncomingMessage } from 'node:http'
 import { Hono } from 'hono'
 import { logger } from 'hono/logger'
 import path from 'path'
@@ -144,6 +146,13 @@ app.get('/debug', async (c) => {
     drizzleUserLookup,
     scrypt,
     authProbe,
+    requestEnv: {
+      hasIncoming: Boolean((c.env as HttpBindings | undefined)?.incoming),
+      hasRawBody: Buffer.isBuffer(
+        ((c.env as HttpBindings | undefined)?.incoming as IncomingMessage & { rawBody?: Buffer })
+          ?.rawBody
+      ),
+    },
     tables,
     migrations,
     env: {
