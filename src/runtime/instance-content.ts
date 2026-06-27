@@ -59,6 +59,44 @@ export function isInstanceContentCached(instanceId: number): boolean {
   return roots.has(instanceId)
 }
 
+const tmpDirPrefix = (instanceId: number) => `globalos-instance-${instanceId}-`
+
+/** Re-register an extracted bundle after a serverless cold start (in-memory map was lost). */
+export async function tryRecoverInstanceContent(
+  instanceId: number,
+  checksum: string,
+): Promise<boolean> {
+  if (roots.has(instanceId)) return true
+
+  let entries: fs.Dirent[]
+  try {
+    entries = await fs.promises.readdir(os.tmpdir(), { withFileTypes: true })
+  } catch {
+    return false
+  }
+
+  const prefix = tmpDirPrefix(instanceId)
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !entry.name.startsWith(prefix)) continue
+
+    const rootDir = path.join(os.tmpdir(), entry.name)
+    const marker = path.join(rootDir, '.globalos-checksum')
+    try {
+      const stored = (await fs.promises.readFile(marker, 'utf-8')).trim()
+      if (stored !== checksum) continue
+    } catch {
+      if (!findIndexHtml(rootDir)) continue
+    }
+
+    if (!findIndexHtml(rootDir)) continue
+    roots.set(instanceId, { rootDir, checksum })
+    console.log(`[instance] recovered ${instanceId} from ${rootDir}`)
+    return true
+  }
+
+  return false
+}
+
 export async function ensureInstanceContent(
   instanceId: number,
   tarBytes: Buffer,
@@ -77,6 +115,7 @@ export async function ensureInstanceContent(
     path.join(os.tmpdir(), `globalos-instance-${instanceId}-`),
   )
   await extractTar(tarBytes, rootDir)
+  await fs.promises.writeFile(path.join(rootDir, '.globalos-checksum'), checksum, 'utf-8')
   roots.set(instanceId, { rootDir, checksum })
   return rootDir
 }

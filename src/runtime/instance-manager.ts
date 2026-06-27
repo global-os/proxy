@@ -7,6 +7,7 @@ import {
   ensureInstanceContent,
   evictInstanceContent,
   isInstanceContentCached,
+  tryRecoverInstanceContent,
 } from './instance-content.js'
 import { INSTANCE_IDLE_MS, CLEANUP_INTERVAL_MS } from './constants.js'
 
@@ -142,6 +143,12 @@ export async function ensureInstanceReady(instanceId: number): Promise<boolean> 
   }
 
   if (!imageId) return false
+
+  if (await tryRecoverInstanceContent(instanceId, checksum)) {
+    await touchInstance(instanceId)
+    await persistInstanceReady(instanceId)
+    return true
+  }
 
   const [imageRow] = await db
     .select({ tar_bytes: schema.image.tar_bytes })
