@@ -15,8 +15,8 @@ async function writeRuntime(out) {
 }
 
 const targets = [
-  path.join(root, 'src/gapp/squint-runtime'),
-  path.join(root, 'dist/src/gapp/squint-runtime'),
+  path.join(root, 'src/gapp/registry/squint'),
+  path.join(root, 'dist/src/gapp/registry/squint'),
 ]
 
 for (const out of targets) {

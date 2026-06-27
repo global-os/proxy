@@ -17,13 +17,14 @@ const RUNTIME_MARKER = path.join('src', 'squint', 'multi.js')
 function squintRuntimeCandidates(): string[] {
   const here = path.dirname(fileURLToPath(import.meta.url))
   return [
-    path.join(here, 'squint-runtime'),
-    path.join(here, '../squint-runtime'),
+    path.join(here, 'registry/squint'),
+    path.join(here, '../registry/squint'),
+    path.join(platformRegistryDir, 'squint'),
     path.join(platformRegistryDir, 'squint-cljs'),
-    path.join(process.cwd(), 'src/gapp/squint-runtime'),
-    path.join(process.cwd(), 'dist/src/gapp/squint-runtime'),
-    '/var/task/src/gapp/squint-runtime',
-    '/var/task/dist/src/gapp/squint-runtime',
+    path.join(process.cwd(), 'src/gapp/registry/squint'),
+    path.join(process.cwd(), 'dist/src/gapp/registry/squint'),
+    '/var/task/src/gapp/registry/squint',
+    '/var/task/dist/src/gapp/registry/squint',
   ]
 }
 
