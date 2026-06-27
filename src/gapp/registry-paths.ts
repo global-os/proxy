@@ -1,10 +1,23 @@
+import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-export const projectRoot = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../..',
-)
+function resolveProjectRoot(): string {
+  const candidates = [
+    process.cwd(),
+    path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..'),
+    '/var/task',
+  ]
+
+  for (const root of candidates) {
+    const squintCli = path.join(root, 'node_modules/squint-cljs/node_cli.js')
+    if (fs.existsSync(squintCli)) return root
+  }
+
+  return process.cwd()
+}
+
+export const projectRoot = resolveProjectRoot()
 
 export const platformRegistryDir = path.join(projectRoot, 'src/gapp/registry')
 

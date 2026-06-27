@@ -5,6 +5,7 @@ import path from 'node:path'
 import { promisify } from 'node:util'
 import { formatExecError } from './exec-error.js'
 import { projectRoot } from './registry-paths.js'
+import { esbuildBinPath, squintCliPath } from './tool-paths.js'
 import type { SquintCompileSpec } from './types.js'
 
 const squintPkg = path.join(projectRoot, 'node_modules/squint-cljs')
@@ -26,7 +27,11 @@ async function runCommand(
   try {
     await execFileAsync(command, args, {
       cwd: opts.cwd,
-      env: process.env,
+      env: {
+        ...process.env,
+        HOME: process.env.HOME ?? os.tmpdir(),
+        npm_config_cache: path.join(os.tmpdir(), 'npm-cache'),
+      },
       maxBuffer: 10 * 1024 * 1024,
     })
   } catch (err) {
@@ -50,10 +55,11 @@ export async function compileSquintSource(
 
   try {
     const squintCwd = path.dirname(sourcePath)
+    const squintCli = squintCliPath()
     await runCommand(
-      'npx',
-      ['squint', 'compile', sourcePath, '--extension', ext],
-      { cwd, label: 'squint compile' },
+      process.execPath,
+      [squintCli, 'compile', sourcePath, '--extension', ext],
+      { cwd, label: `squint compile (${squintCli})` },
     )
 
     const compiledName = path.basename(sourcePath, path.extname(sourcePath)) + ext
@@ -66,7 +72,6 @@ export async function compileSquintSource(
 
     const bundleOut = path.join(tmp, 'bundle.js')
     const esbuildArgs = [
-      'esbuild',
       compiledPath,
       '--bundle',
       '--format=esm',
@@ -82,7 +87,11 @@ export async function compileSquintSource(
       `--alias:squint-cljs/src/squint/multi.js=${path.join(squintPkg, 'src/squint/multi.js')}`,
     )
 
-    await runCommand('npx', esbuildArgs, { cwd: projectRoot, label: 'esbuild bundle' })
+    const esbuildBin = esbuildBinPath()
+    await runCommand(esbuildBin, esbuildArgs, {
+      cwd: projectRoot,
+      label: `esbuild bundle (${esbuildBin})`,
+    })
     return fs.readFile(bundleOut)
   } finally {
     await fs.rm(tmp, { recursive: true, force: true })

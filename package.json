@@ -42,6 +42,7 @@
     "dotenv": "^17.2.3",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
+    "esbuild": "^0.25.12",
     "fp-ts": "^2.16.11",
     "hono": "^4.10.8",
     "jsdom": "^27.3.0",
@@ -49,11 +50,11 @@
     "pg": "^8.16.3",
     "postmark": "^4.0.7",
     "prettier": "^3.7.4",
+    "squint-cljs": "^0.14.196",
     "styled-components": "^6.1.19",
     "tar": "^7.5.16",
     "tsx": "^4.19.4",
     "typescript": "^5.9.3",
-    "squint-cljs": "^0.14.196",
     "yjs": "^13.6.20"
   },
   "devDependencies": {
