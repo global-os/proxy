@@ -3,24 +3,67 @@ import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import * as esbuild from 'esbuild'
+import type { Plugin } from 'esbuild'
 import { compileString } from 'squint-cljs/node-api.js'
 import { formatExecError } from './exec-error.js'
 import { platformRegistryDir } from './registry-paths.js'
 
 const require = createRequire(import.meta.url)
 
-function squintRuntimeSourceDir(): string {
-  const staged = path.join(platformRegistryDir, 'squint-cljs')
-  if (fs.existsSync(path.join(staged, 'core.js'))) return staged
-  return path.dirname(require.resolve('squint-cljs/node-api.js'))
+const RUNTIME_MARKER = path.join('src', 'squint', 'multi.js')
+
+function squintRuntimeCandidates(): string[] {
+  const here = path.dirname(fileURLToPath(import.meta.url))
+  return [
+    path.join(here, 'squint-runtime'),
+    path.join(here, '../squint-runtime'),
+    path.join(platformRegistryDir, 'squint-cljs'),
+    path.join(process.cwd(), 'src/gapp/squint-runtime'),
+    path.join(process.cwd(), 'dist/src/gapp/squint-runtime'),
+    '/var/task/src/gapp/squint-runtime',
+    '/var/task/dist/src/gapp/squint-runtime',
+  ]
 }
 
-async function stageSquintRuntime(tmp: string): Promise<void> {
-  const src = squintRuntimeSourceDir()
-  const dest = path.join(tmp, 'node_modules', 'squint-cljs')
-  await fsp.mkdir(path.dirname(dest), { recursive: true })
+function resolveSquintRuntimeDir(): string {
+  for (const dir of squintRuntimeCandidates()) {
+    if (fs.existsSync(path.join(dir, RUNTIME_MARKER))) return dir
+  }
+
+  const fromNodeModules = path.dirname(require.resolve('squint-cljs/node-api.js'))
+  if (fs.existsSync(path.join(fromNodeModules, RUNTIME_MARKER))) {
+    return fromNodeModules
+  }
+
+  throw new Error(
+    `squint runtime not found (need ${RUNTIME_MARKER}); checked: ${squintRuntimeCandidates().join(', ')}`,
+  )
+}
+
+async function stageSquintRuntime(tmp: string): Promise<string> {
+  const src = resolveSquintRuntimeDir()
+  const dest = path.join(tmp, 'squint-cljs')
+  await fsp.mkdir(dest, { recursive: true })
   await fsp.cp(src, dest, { recursive: true })
+
+  if (!fs.existsSync(path.join(dest, RUNTIME_MARKER))) {
+    throw new Error(`squint runtime incomplete after copy from ${src}`)
+  }
+
+  return dest
+}
+
+function squintResolvePlugin(runtimeRoot: string): Plugin {
+  return {
+    name: 'squint-runtime',
+    setup(build) {
+      build.onResolve({ filter: /^squint-cljs\// }, (args) => ({
+        path: path.join(runtimeRoot, args.path.slice('squint-cljs/'.length)),
+      }))
+    },
+  }
 }
 
 function globalBanner(externals: Record<string, string>): string {
@@ -64,7 +107,7 @@ export async function compileSquintSource(
 
     const entryPath = path.join(tmp, 'entry.js')
     await fsp.writeFile(entryPath, javascript)
-    await stageSquintRuntime(tmp)
+    const runtimeRoot = await stageSquintRuntime(tmp)
 
     try {
       const result = await esbuild.build({
@@ -74,6 +117,7 @@ export async function compileSquintSource(
         platform: 'browser',
         write: false,
         banner: banner ? { js: banner } : undefined,
+        plugins: [squintResolvePlugin(runtimeRoot)],
       })
 
       const output = result.outputFiles[0]?.contents
