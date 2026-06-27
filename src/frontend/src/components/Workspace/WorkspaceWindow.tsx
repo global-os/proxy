@@ -31,6 +31,10 @@ const Chrome = createComponent(
 
 const TitleBar = createComponent(
   () => ({
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '4px 6px 4px 8px',
     borderBottom: '1px solid rgba(0,0,0, 0.5)',
     background: 'rgba(255,255,255, 0.8)',
     userSelect: 'none',
@@ -38,6 +42,36 @@ const TitleBar = createComponent(
   }),
   'div',
   ['data-window-index', 'onMouseDown']
+)
+
+const TitleLabel = createComponent(
+  () => ({
+    flex: '1 1 auto',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    fontSize: '12px',
+  }),
+  'span'
+)
+
+const CloseButton = createComponent(
+  () => ({
+    flex: '0 0 auto',
+    border: '1px solid rgba(0,0,0, 0.25)',
+    borderRadius: '4px',
+    background: 'rgba(255,255,255, 0.9)',
+    color: '#333',
+    fontSize: '11px',
+    lineHeight: 1,
+    padding: '3px 8px',
+    cursor: 'pointer',
+    ':hover': {
+      background: '#fff',
+    },
+  }),
+  'button',
+  ['type', 'onClick', 'onMouseDown']
 )
 
 const ResizeHandle = createComponent(
@@ -79,6 +113,7 @@ type Props = {
   left: string
   top: string
   onMouseDown: (e: MouseEvent) => void
+  onClose: () => void
   onIframeRef?: (el: HTMLIFrameElement | null) => void
 }
 
@@ -89,6 +124,7 @@ export function WorkspaceWindow({
   left,
   top,
   onMouseDown,
+  onClose,
   onIframeRef,
 }: Props) {
   return (
@@ -100,7 +136,17 @@ export function WorkspaceWindow({
       zIndex={win.zIndex}
     >
       <TitleBar data-window-index={windowIndex} onMouseDown={onMouseDown}>
-        {win.title}
+        <TitleLabel>{win.title}</TitleLabel>
+        <CloseButton
+          type="button"
+          onMouseDown={e => e.stopPropagation()}
+          onClick={e => {
+            e.stopPropagation()
+            onClose()
+          }}
+        >
+          Close
+        </CloseButton>
       </TitleBar>
       <StyledIframe
         dragging={isInteracting}

@@ -1,5 +1,5 @@
 import { createComponent } from 'react-fela'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { WorkspaceProps } from './types'
 import { useWorkspace } from './useWorkspace'
@@ -138,6 +138,7 @@ export function Workspace({ sessionId, children }: WorkspaceProps) {
     children.onStartup
   )
   const [launchMessage, setLaunchMessage] = useState<string | null>(null)
+  const queryClient = useQueryClient()
   const { bindWindow } = useSessionKernel(sessionId)
 
   const hydratedSession = useRef<string | null>(null)
@@ -219,6 +220,20 @@ export function Workspace({ sessionId, children }: WorkspaceProps) {
     }
   }, [actions, sessionId])
 
+  const closeWindow = useCallback(async (windowId: number) => {
+    actions.closeWindow(windowId)
+    try {
+      const r = await fetch(`/api/sessions/${sessionId}/windows/${windowId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      if (!r.ok) return
+      await queryClient.invalidateQueries({ queryKey: ['session-windows', sessionId] })
+    } catch {
+      // UI already updated; sync on next refresh
+    }
+  }, [actions, queryClient, sessionId])
+
   return (
     <Frame onMouseMove={onMouseMove} onMouseUp={onMouseUp}>
       <IconGrid>
@@ -246,6 +261,7 @@ export function Workspace({ sessionId, children }: WorkspaceProps) {
           left={computeX(win.x, win.width) + 'px'}
           top={computeY(win.y, win.height) + 'px'}
           onMouseDown={onMouseDown}
+          onClose={() => void closeWindow(win.id)}
           onIframeRef={el => bindWindow(win, el)}
         />
       ))}

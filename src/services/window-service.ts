@@ -195,6 +195,21 @@ export async function focusWindow(sessionId: number, windowId: number): Promise<
   return toDto(resolved)
 }
 
+export async function deleteWindow(
+  sessionId: number,
+  windowId: number,
+): Promise<boolean> {
+  const [deleted] = await db
+    .delete(schema.workspaceWindow)
+    .where(and(
+      eq(schema.workspaceWindow.id, windowId),
+      eq(schema.workspaceWindow.session_id, sessionId),
+    ))
+    .returning({ id: schema.workspaceWindow.id })
+
+  return !!deleted
+}
+
 export async function updateWindowGeometry(
   sessionId: number,
   windowId: number,

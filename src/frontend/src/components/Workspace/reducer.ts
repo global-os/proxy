@@ -84,6 +84,17 @@ export function reducer(state: State, action: WorkspaceAction): State {
         zIndexCounter: action.zIndex + 1,
       }
     }
+    case WorkspaceActionKind.CLOSE_WINDOW: {
+      return {
+        ...state,
+        windows: state.windows.filter(w => w.id !== action.windowId),
+        dragOrigin: undefined,
+        draggingWindow: undefined,
+        resizeOrigin: undefined,
+        resizingWindow: undefined,
+        resizeHandle: undefined,
+      }
+    }
     case WorkspaceActionKind.DRAG_WINDOW: {
       if (state.dragOrigin === undefined) {
         throw new Error('cannot drag while drag origin is undefined')

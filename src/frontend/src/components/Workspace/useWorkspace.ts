@@ -26,6 +26,9 @@ export function useWorkspace(onStartup?: (actions: WorkspaceActions) => void) {
     focusWindow(windowId, zIndex) {
       dispatch({ type: WorkspaceActionKind.FOCUS_WINDOW, windowId, zIndex })
     },
+    closeWindow(windowId) {
+      dispatch({ type: WorkspaceActionKind.CLOSE_WINDOW, windowId })
+    },
   }), [])
 
   const hasRun = useRef(false)

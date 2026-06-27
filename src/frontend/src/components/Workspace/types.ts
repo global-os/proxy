@@ -43,6 +43,7 @@ export enum WorkspaceActionKind {
   SET_WINDOWS = 'SET_WINDOWS',
   OPEN_WINDOW = 'OPEN_WINDOW',
   FOCUS_WINDOW = 'FOCUS_WINDOW',
+  CLOSE_WINDOW = 'CLOSE_WINDOW',
   DRAG_WINDOW = 'DRAG_WINDOW',
   START_DRAGGING_WINDOW = 'START_DRAGGING_WINDOW',
   STOP_DRAGGING_WINDOW = 'STOP_DRAGGING_WINDOW',
@@ -64,6 +65,10 @@ export type WorkspaceAction =
       type: WorkspaceActionKind.FOCUS_WINDOW
       windowId: number
       zIndex: number
+    }
+  | {
+      type: WorkspaceActionKind.CLOSE_WINDOW
+      windowId: number
     }
   | {
       type: WorkspaceActionKind.DRAG_WINDOW
@@ -95,6 +100,7 @@ export type WorkspaceActions = {
   openWindow: (window: WindowSpec) => void
   setWindows: (windows: AppWindow[]) => void
   focusWindow: (windowId: number, zIndex: number) => void
+  closeWindow: (windowId: number) => void
 }
 
 export type WorkspaceProps = {
