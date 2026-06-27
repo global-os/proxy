@@ -83,13 +83,14 @@ npx drizzle-kit generate
 npx drizzle-kit push
 ```
 
-**Apply known production migrations manually:**
+**Migrations on deploy:** `npm run vercel-build` runs `scripts/apply-pending-migrations.mjs` automatically (requires `DATABASE_URL` + `DATABASE_SSL=true` in Vercel env vars). New migrations under `drizzle/*/migration.sql` (from `20260626000000_instances` onward) are applied once and recorded in `app_migrations`.
+
+**Apply manually (local or one-off):**
 
 ```bash
-DATABASE_URL=... node scripts/apply-pending-migrations.mjs
+npm run db:migrate
+# or: node --env-file=.env scripts/apply-pending-migrations.mjs
 ```
-
-The script applies migrations listed in `scripts/apply-pending-migrations.mjs` (idempotent skips for existing objects).
 
 ### Frontend routes
 

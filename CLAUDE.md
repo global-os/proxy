@@ -67,7 +67,7 @@ cd src/frontend && npm run regenerate   # TanStack Router codegen
 
 npx drizzle-kit generate
 npx drizzle-kit push
-DATABASE_URL=... node scripts/apply-pending-migrations.mjs
+npm run db:migrate   # local; also runs automatically in vercel-build on deploy
 ```
 
 ## Environment (minimum)
@@ -110,7 +110,7 @@ Optional: `DATABASE_SSL=true`, `POSTMARK_*`, `INSTANCE_*` overrides.
 ## When adding features
 
 - **New API routes:** Mount under `src/routes/` or `src/app.ts`; remember public `/api/...` becomes `/app/api/...` internally
-- **New DB tables:** Update `src/db/schema.ts`, generate migration, add to `apply-pending-migrations.mjs` if prod applies manually, extend `/health` table checks if user-facing
+- **New DB tables:** Update `src/db/schema.ts`, add `drizzle/<timestamp>_<name>/migration.sql` (auto-applied on Vercel deploy), extend `/health` table checks if user-facing
 - **Iframe apps:** Communicate via session kernel messages (`ready`, `save`); keep kernel app-agnostic
 - **Multiple instances per process:** Instance subdomain already supports it; kernel state may need to move from `processId` to `instanceId` keying
 

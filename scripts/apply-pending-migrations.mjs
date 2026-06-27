@@ -4,38 +4,78 @@ import pg from 'pg'
 
 const { Pool } = pg
 
-const MIGRATIONS = [
-  '20260626000000_instances',
-  '20260626120000_drop_proxy_columns',
-  '20260627000000_workspace_windows',
-  '20260627100000_workspace_window_bundle_name',
-  '20260627120000_instance_slug',
-]
+/** First migration managed by this deploy pipeline (older dirs were applied via drizzle-kit push). */
+const AUTO_MIGRATE_SINCE = '20260626000000_instances'
+
+function listMigrations() {
+  const drizzleDir = path.join(process.cwd(), 'drizzle')
+  return fs
+    .readdirSync(drizzleDir)
+    .filter((name) => fs.existsSync(path.join(drizzleDir, name, 'migration.sql')))
+    .sort()
+    .filter((name) => name >= AUTO_MIGRATE_SINCE)
+}
 
 function splitStatements(sql) {
   return sql
     .split('--> statement-breakpoint')
-    .map(s => s.trim())
+    .map((s) => s.trim())
     .filter(Boolean)
+}
+
+function buildPoolConfig(url) {
+  const config = { connectionString: url }
+  if (process.env.DATABASE_SSL === 'true') {
+    config.ssl = { rejectUnauthorized: false }
+  }
+  return config
+}
+
+async function ensureMigrationTable(pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS app_migrations (
+      name text PRIMARY KEY,
+      applied_at timestamptz NOT NULL DEFAULT now()
+    )
+  `)
+}
+
+async function loadAppliedMigrations(pool) {
+  const result = await pool.query('SELECT name FROM app_migrations')
+  return new Set(result.rows.map((row) => row.name))
 }
 
 async function main() {
   const url = process.env.DATABASE_URL?.trim()
   if (!url) {
-    console.error('DATABASE_URL is required')
-    process.exit(1)
+    if (process.env.VERCEL) {
+      console.error('DATABASE_URL is required for Vercel builds (set it in project env vars).')
+      process.exit(1)
+    }
+    console.warn('[migrate] Skipping: DATABASE_URL is not set')
+    return
   }
 
-  const pool = new Pool({
-    connectionString: url,
-    ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
-  })
+  const migrations = listMigrations()
+  if (migrations.length === 0) {
+    console.log('[migrate] No eligible migration.sql files found')
+    return
+  }
+
+  const pool = new Pool(buildPoolConfig(url))
 
   try {
     await pool.query('SELECT 1')
-    console.log('Connected')
+    await ensureMigrationTable(pool)
+    const applied = await loadAppliedMigrations(pool)
+    console.log(`[migrate] Connected (${migrations.length} eligible, ${applied.size} already recorded)`)
 
-    for (const dir of MIGRATIONS) {
+    for (const dir of migrations) {
+      if (applied.has(dir)) {
+        console.log(`\n=== ${dir} === SKIP (recorded)`)
+        continue
+      }
+
       const file = path.join('drizzle', dir, 'migration.sql')
       const sql = fs.readFileSync(file, 'utf8')
       console.log(`\n=== ${dir} ===`)
@@ -52,19 +92,22 @@ async function main() {
           }
         }
       }
+
+      await pool.query('INSERT INTO app_migrations (name) VALUES ($1)', [dir])
+      console.log('RECORDED:', dir)
     }
 
     const tables = await pool.query(`
       SELECT table_name FROM information_schema.tables
       WHERE table_schema = 'public' ORDER BY table_name
     `)
-    console.log('\nTables:', tables.rows.map(r => r.table_name).join(', '))
+    console.log('\n[migrate] Tables:', tables.rows.map((r) => r.table_name).join(', '))
   } finally {
     await pool.end()
   }
 }
 
-main().catch(err => {
-  console.error(err)
+main().catch((err) => {
+  console.error('[migrate] Failed:', err)
   process.exit(1)
 })
