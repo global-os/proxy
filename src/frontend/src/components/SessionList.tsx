@@ -80,8 +80,8 @@ function PrimaryButton({
         'self-start px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors duration-100',
         variant === 'primary' && (
           disabled
-            ? 'bg-blue-200 text-white cursor-default'
-            : 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+            ? 'bg-violet-200 text-white cursor-default'
+            : 'bg-violet-600 text-white hover:bg-violet-700 cursor-pointer'
         ),
         variant === 'secondary' && (
           disabled
@@ -159,7 +159,7 @@ export const SessionList = ({ onLogOut, isLoggingOut }: SessionListProps) => {
   const tabCls = cn(
     'flex-1 border-none rounded-lg px-3 py-2 text-sm font-medium bg-transparent',
     'text-gray-500 cursor-pointer transition-colors duration-100',
-    'aria-selected:bg-white aria-selected:text-blue-700 aria-selected:shadow-sm',
+    'aria-selected:bg-white aria-selected:text-violet-700 aria-selected:shadow-sm',
   )
 
   return (
@@ -192,9 +192,9 @@ export const SessionList = ({ onLogOut, isLoggingOut }: SessionListProps) => {
                 sessions.map((sess, i) => (
                   <div
                     key={sess.id}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 transition-colors duration-100 hover:bg-blue-50/50 hover:border-blue-200"
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 transition-colors duration-100 hover:bg-violet-50/50 hover:border-violet-200"
                   >
-                    <span className="shrink-0 min-w-8 text-center px-2 py-1 rounded-md text-xs font-semibold text-blue-700 bg-blue-100">
+                    <span className="shrink-0 min-w-8 text-center px-2 py-1 rounded-md text-xs font-semibold text-violet-700 bg-violet-100">
                       #{i + 1}
                     </span>
 
@@ -209,7 +209,7 @@ export const SessionList = ({ onLogOut, isLoggingOut }: SessionListProps) => {
                       <Link
                         to="/session/$sessionId"
                         params={{ sessionId: String(sess.id) }}
-                        className="inline-flex items-center px-3.5 py-1.5 rounded-lg text-sm font-semibold no-underline text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-100"
+                        className="inline-flex items-center px-3.5 py-1.5 rounded-lg text-sm font-semibold no-underline text-white bg-violet-600 hover:bg-violet-700 transition-colors duration-100"
                       >
                         Open
                       </Link>
@@ -256,7 +256,7 @@ export const SessionList = ({ onLogOut, isLoggingOut }: SessionListProps) => {
               {isAdmin && (
                 <Link
                   to="/admin"
-                  className="mt-1 text-sm text-blue-600 no-underline hover:text-blue-800 transition-colors duration-100"
+                  className="mt-1 text-sm text-violet-600 no-underline hover:text-violet-800 transition-colors duration-100"
                 >
                   Admin panel
                 </Link>
@@ -279,7 +279,7 @@ export const SessionList = ({ onLogOut, isLoggingOut }: SessionListProps) => {
             <p className="m-0 text-base font-semibold text-gray-900">Help</p>
             <p className="m-0 text-sm text-gray-500 leading-normal">
               For support, email{' '}
-              <a href="mailto:coldairnetworks@fastmail.com" className="text-blue-600 hover:text-blue-800">
+              <a href="mailto:coldairnetworks@fastmail.com" className="text-violet-600 hover:text-violet-800">
                 coldairnetworks@fastmail.com
               </a>{' '}
               and we will assist as soon as possible.

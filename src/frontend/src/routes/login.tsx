@@ -111,7 +111,7 @@ function RouteComponent() {
               <label htmlFor="password" className={authLabelCls}>
                 Password
               </label>
-              <Link to="/forgot-password" className="text-xs text-blue-600 hover:text-blue-800 no-underline">
+              <Link to="/forgot-password" className="text-xs text-violet-600 hover:text-violet-800 no-underline">
                 Forgot password?
               </Link>
             </div>

@@ -14,7 +14,7 @@ export const Page = ({ children, variant = 'default' }: PageProps) => {
   return (
     <div
       className="w-full min-h-screen overflow-auto"
-      style={{ background: 'linear-gradient(165deg, #1e40af 0%, #2563eb 45%, #1d4ed8 100%)' }}
+      style={{ background: 'linear-gradient(165deg, #3b0764 0%, #6d28d9 45%, #5b21b6 100%)' }}
     >
       {children}
     </div>
