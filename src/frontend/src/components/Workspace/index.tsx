@@ -108,6 +108,7 @@ type ServerWindow = {
   id: number
   processId: number
   instanceId: number
+  instanceSlug?: string
   title: string
   bundleName: string
   x: number

@@ -8,6 +8,8 @@ const MIGRATIONS = [
   '20260626000000_instances',
   '20260626120000_drop_proxy_columns',
   '20260627000000_workspace_windows',
+  '20260627100000_workspace_window_bundle_name',
+  '20260627120000_instance_slug',
 ]
 
 function splitStatements(sql) {

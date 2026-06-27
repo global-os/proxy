@@ -10,7 +10,7 @@ GlobalOS PROXY is the monorepo for the GlobalOS web desktop:
 - **Frontend:** React SPA in `src/frontend` (Vite, TanStack Router, Fela)
 - **Database:** PostgreSQL via Drizzle ORM (`src/db/schema.ts`)
 - **Auth:** better-auth (`src/auth.ts`), mounted at `/app/api/auth`
-- **Runtime:** `.gapp` directories stored as `file`/`directory` rows; snapshotted to `image.tar_bytes`; served from `{instanceId}.app.onetrueos.com`
+- **Runtime:** `.gapp` directories stored as `file`/`directory` rows; snapshotted to `image.tar_bytes`; served from `{instanceSlug}.app.onetrueos.com` (UUID in `instances.slug`)
 
 Production URL: `https://app.app.onetrueos.com`
 
@@ -19,7 +19,7 @@ Production URL: `https://app.app.onetrueos.com`
 ```
 Session (workspace)
   └── Process (1 per session + .gapp directory)
-        └── Instance(s) (runtime; subdomain = instances.id)
+        └── Instance(s) (runtime; public subdomain = instances.slug UUID)
               └── workspace_window (UI chrome: position, title, iframe src)
 ```
 
@@ -34,7 +34,7 @@ Session (workspace)
 | Host | Example path | Internal path |
 |------|----------------|---------------|
 | `app.app.onetrueos.com` | `/api/sessions/1/launch` | `/app/api/sessions/1/launch` |
-| `123.app.onetrueos.com` | `/index.html` | `/instance/123/index.html` |
+| `{uuid}.app.onetrueos.com` | `/index.html` | `/instance/{uuid}/index.html` |
 | `www.onetrueos.com` | `/` | `/www` (marketing landing) |
 
 Public paths `/health` and `/debug` bypass the `/app` prefix.

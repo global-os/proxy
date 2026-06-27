@@ -18,7 +18,7 @@ Browser (app.app.onetrueos.com)
 
 1. User clicks a `.gapp` on the Desktop → `POST /api/sessions/:id/launch`
 2. Server finds or creates a **process** (one per session + directory), ensures an **instance** (runtime slot)
-3. Server opens or focuses a **workspace window** with `src` pointing at `{instanceId}.app.onetrueos.com`
+3. Server opens or focuses a **workspace window** with `src` pointing at `{instanceSlug}.app.onetrueos.com` (UUID slug, globally unique)
 4. First iframe request triggers **bundle resolve + extract** (`ensureInstanceReady`) — not during launch
 
 **Data model (simplified)**
@@ -27,7 +27,7 @@ Browser (app.app.onetrueos.com)
 |--------|------|
 | `sessions` | Workspace (per user) |
 | `process` | One per session + `.gapp` directory |
-| `instances` | Runtime for a process; subdomain slug = `instances.id` |
+| `instances` | Runtime for a process; public host = `instances.slug` (UUID) |
 | `workspace_window` | Persisted window geometry + iframe target |
 | `directory` / `file` | Virtual FS (RLS-scoped per user) |
 | `image` | Cached tar snapshot of a `.gapp` directory |
@@ -123,7 +123,7 @@ Paths below are as seen by the browser; internally they are prefixed with `/app`
 | GET | `/api/fs/desktop` | yes | Desktop items for workspace |
 | GET | `/api/sessions/:id/windows` | yes | Restore window layout |
 | POST | `/api/sessions/:id/launch` | yes | Launch or focus a `.gapp` |
-| GET | `/{instanceId}.app.../` | no | Serve extracted app static files |
+| GET | `/{instanceSlug}.app.../` | no | Serve extracted app static files |
 
 ## Operations
 

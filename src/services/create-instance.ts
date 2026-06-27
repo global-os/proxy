@@ -4,10 +4,12 @@ import { db } from '../db/index.js'
 import * as schema from '../db/schema.js'
 import { PENDING_INSTANCE_CHECKSUM } from '../runtime/instance-constants.js'
 import { instancePublicUrl } from '../runtime/constants.js'
+import { generateInstanceSlug } from '../runtime/instance-slug.js'
 import { LaunchError } from './errors.js'
 
 export type CreatedInstance = {
   instanceId: number
+  instanceSlug: string
   url: string
   restarted: boolean
 }
@@ -28,20 +30,26 @@ export async function createInstanceForProcess(processId: number): Promise<Creat
   }
 
   const meta = await resolveImageMeta(processRow.directory_id)
+  const slug = generateInstanceSlug()
 
   const [instanceRow] = await db
     .insert(schema.instances)
     .values({
+      slug,
       process_id: processId,
       image_id: meta?.id ?? null,
       directory_checksum: meta?.directory_checksum ?? PENDING_INSTANCE_CHECKSUM,
       state: 'starting',
     })
-    .returning({ id: schema.instances.id })
+    .returning({
+      id: schema.instances.id,
+      slug: schema.instances.slug,
+    })
 
   return {
     instanceId: instanceRow.id,
-    url: instancePublicUrl(instanceRow.id),
+    instanceSlug: instanceRow.slug,
+    url: instancePublicUrl(instanceRow.slug),
     restarted: false,
   }
 }
@@ -49,7 +57,10 @@ export async function createInstanceForProcess(processId: number): Promise<Creat
 /** Ensure the process has a live primary instance, restarting a stopped one when possible. */
 export async function ensurePrimaryInstance(processId: number): Promise<CreatedInstance> {
   const [live] = await db
-    .select({ id: schema.instances.id })
+    .select({
+      id: schema.instances.id,
+      slug: schema.instances.slug,
+    })
     .from(schema.instances)
     .where(and(
       eq(schema.instances.process_id, processId),
@@ -61,13 +72,17 @@ export async function ensurePrimaryInstance(processId: number): Promise<CreatedI
   if (live) {
     return {
       instanceId: live.id,
-      url: instancePublicUrl(live.id),
+      instanceSlug: live.slug,
+      url: instancePublicUrl(live.slug),
       restarted: false,
     }
   }
 
   const [stopped] = await db
-    .select({ id: schema.instances.id })
+    .select({
+      id: schema.instances.id,
+      slug: schema.instances.slug,
+    })
     .from(schema.instances)
     .where(and(
       eq(schema.instances.process_id, processId),
@@ -84,7 +99,8 @@ export async function ensurePrimaryInstance(processId: number): Promise<CreatedI
 
     return {
       instanceId: stopped.id,
-      url: instancePublicUrl(stopped.id),
+      instanceSlug: stopped.slug,
+      url: instancePublicUrl(stopped.slug),
       restarted: true,
     }
   }

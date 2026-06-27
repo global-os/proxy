@@ -124,9 +124,10 @@ export const process = pgTable('process', {
   index('process_session_directory_uidx').on(table.session_id, table.directory_id),
 ]);
 
-/** Live runtime for a process. Subdomain slug = instances.id */
+/** Live runtime for a process. Public URL host = `{slug}.app.onetrueos.com`. */
 export const instances = pgTable('instances', {
   id: serial('id').primaryKey(),
+  slug: text('slug').notNull().unique(),
   process_id: integer('process_id').notNull().references(() => process.id),
   image_id: integer('image_id').references(() => image.id),
   directory_checksum: text('directory_checksum').notNull(),

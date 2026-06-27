@@ -8,12 +8,12 @@ export const INSTANCE_DOMAIN_SUFFIX =
   (process.env.NODE_ENV === 'production' ? 'app.onetrueos.com' : 'app.dev.onetrueos.com')
 
 /** Origin used in iframe URLs (defaults to backend port 3000 in dev). */
-export function instancePublicUrl(instanceId: number): string {
+export function instancePublicUrl(instanceSlug: string): string {
   if (process.env.INSTANCE_PUBLIC_ORIGIN) {
-    return new URL(`${instanceId}.${INSTANCE_DOMAIN_SUFFIX}/`, process.env.INSTANCE_PUBLIC_ORIGIN).toString()
+    return new URL(`${instanceSlug}.${INSTANCE_DOMAIN_SUFFIX}/`, process.env.INSTANCE_PUBLIC_ORIGIN).toString()
   }
   const protocol = process.env.INSTANCE_PUBLIC_PROTOCOL ?? (process.env.NODE_ENV === 'production' ? 'https' : 'http')
   const port = process.env.INSTANCE_PUBLIC_PORT ?? (process.env.NODE_ENV === 'production' ? '' : '3000')
   const portSuffix = port ? `:${port}` : ''
-  return `${protocol}://${instanceId}.${INSTANCE_DOMAIN_SUFFIX}${portSuffix}/`
+  return `${protocol}://${instanceSlug}.${INSTANCE_DOMAIN_SUFFIX}${portSuffix}/`
 }

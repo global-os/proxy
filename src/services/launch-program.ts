@@ -13,6 +13,7 @@ import {
 export type LaunchResult = {
   processId: number
   instanceId: number
+  instanceSlug: string
   url: string
   action: 'focus' | 'open'
   window: WorkspaceWindowDto
@@ -36,8 +37,8 @@ export async function launchProgram(opts: {
 
   const processRow = await findOrCreateProcess(sessionId, directoryId)
   log(`process ${processRow.id}`)
-  const { instanceId, url } = await ensurePrimaryInstance(processRow.id)
-  log(`instance ${instanceId}`)
+  const { instanceId, instanceSlug, url } = await ensurePrimaryInstance(processRow.id)
+  log(`instance ${instanceSlug}`)
 
   const existingWindows = await listProcessWindows(sessionId, processRow.id)
   log(`windows ${existingWindows.length}`)
@@ -51,6 +52,7 @@ export async function launchProgram(opts: {
     return {
       processId: processRow.id,
       instanceId: focused.instanceId,
+      instanceSlug: focused.instanceSlug,
       url: focused.src,
       action: 'focus',
       window: focused,
@@ -62,6 +64,7 @@ export async function launchProgram(opts: {
     sessionId,
     processId: processRow.id,
     instanceId,
+    instanceSlug,
     title,
     bundleName,
     x: offset,
@@ -73,6 +76,7 @@ export async function launchProgram(opts: {
   return {
     processId: processRow.id,
     instanceId,
+    instanceSlug,
     url: opened.src,
     action: 'open',
     window: opened,

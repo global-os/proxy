@@ -8,6 +8,7 @@ export type WorkspaceWindowDto = {
   sessionId: number
   processId: number
   instanceId: number
+  instanceSlug: string
   title: string
   bundleName: string
   x: number
@@ -18,12 +19,28 @@ export type WorkspaceWindowDto = {
   src: string
 }
 
-function toDto(row: typeof schema.workspaceWindow.$inferSelect): WorkspaceWindowDto {
+type WindowJoinedRow = {
+  id: number
+  session_id: number
+  process_id: number
+  instance_id: number
+  instance_slug: string
+  title: string
+  bundle_name: string
+  x: number
+  y: number
+  width: number
+  height: number
+  z_index: number
+}
+
+function toDto(row: WindowJoinedRow): WorkspaceWindowDto {
   return {
     id: row.id,
     sessionId: row.session_id,
     processId: row.process_id,
     instanceId: row.instance_id,
+    instanceSlug: row.instance_slug,
     title: row.title,
     bundleName: row.bundle_name,
     x: row.x,
@@ -31,14 +48,32 @@ function toDto(row: typeof schema.workspaceWindow.$inferSelect): WorkspaceWindow
     width: row.width,
     height: row.height,
     zIndex: row.z_index,
-    src: instancePublicUrl(row.instance_id),
+    src: instancePublicUrl(row.instance_slug),
   }
 }
 
-export async function listSessionWindows(sessionId: number): Promise<WorkspaceWindowDto[]> {
-  const rows = await db
-    .select()
+function windowQuery() {
+  return db
+    .select({
+      id: schema.workspaceWindow.id,
+      session_id: schema.workspaceWindow.session_id,
+      process_id: schema.workspaceWindow.process_id,
+      instance_id: schema.workspaceWindow.instance_id,
+      instance_slug: schema.instances.slug,
+      title: schema.workspaceWindow.title,
+      bundle_name: schema.workspaceWindow.bundle_name,
+      x: schema.workspaceWindow.x,
+      y: schema.workspaceWindow.y,
+      width: schema.workspaceWindow.width,
+      height: schema.workspaceWindow.height,
+      z_index: schema.workspaceWindow.z_index,
+    })
     .from(schema.workspaceWindow)
+    .innerJoin(schema.instances, eq(schema.workspaceWindow.instance_id, schema.instances.id))
+}
+
+export async function listSessionWindows(sessionId: number): Promise<WorkspaceWindowDto[]> {
+  const rows = await windowQuery()
     .where(eq(schema.workspaceWindow.session_id, sessionId))
     .orderBy(schema.workspaceWindow.z_index)
 
@@ -49,9 +84,7 @@ export async function listProcessWindows(
   sessionId: number,
   processId: number,
 ): Promise<WorkspaceWindowDto[]> {
-  const rows = await db
-    .select()
-    .from(schema.workspaceWindow)
+  const rows = await windowQuery()
     .where(and(
       eq(schema.workspaceWindow.session_id, sessionId),
       eq(schema.workspaceWindow.process_id, processId),
@@ -74,6 +107,7 @@ export async function createWindow(opts: {
   sessionId: number
   processId: number
   instanceId: number
+  instanceSlug: string
   title: string
   bundleName: string
   x?: number
@@ -97,14 +131,27 @@ export async function createWindow(opts: {
       z_index: zIndex,
       last_focused_at: new Date(),
     })
-    .returning()
+    .returning({ id: schema.workspaceWindow.id })
 
-  return toDto(row)
+  return toDto({
+    id: row.id,
+    session_id: opts.sessionId,
+    process_id: opts.processId,
+    instance_id: opts.instanceId,
+    instance_slug: opts.instanceSlug,
+    title: opts.title,
+    bundle_name: opts.bundleName,
+    x: opts.x ?? 0,
+    y: opts.y ?? 0,
+    width: opts.width ?? 720,
+    height: opts.height ?? 480,
+    z_index: zIndex,
+  })
 }
 
 export async function focusWindow(sessionId: number, windowId: number): Promise<WorkspaceWindowDto | null> {
   const zIndex = await nextZIndex(sessionId)
-  const [row] = await db
+  const [updated] = await db
     .update(schema.workspaceWindow)
     .set({
       z_index: zIndex,
@@ -114,7 +161,16 @@ export async function focusWindow(sessionId: number, windowId: number): Promise<
       eq(schema.workspaceWindow.id, windowId),
       eq(schema.workspaceWindow.session_id, sessionId),
     ))
-    .returning()
+    .returning({ id: schema.workspaceWindow.id })
+
+  if (!updated) return null
+
+  const [row] = await windowQuery()
+    .where(and(
+      eq(schema.workspaceWindow.id, windowId),
+      eq(schema.workspaceWindow.session_id, sessionId),
+    ))
+    .limit(1)
 
   return row ? toDto(row) : null
 }

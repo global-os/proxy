@@ -20,6 +20,7 @@ import programsRoutes from './routes/programs.js'
 import { ensureInstanceReady, touchInstance } from './runtime/instance-manager.js'
 import { INSTANCE_MIME, resolveCachedInstanceFile } from './runtime/instance-content.js'
 import { instanceSlugFromHostname, stripInstancePrefix } from './runtime/instance-proxy.js'
+import { resolveInstanceIdBySlug } from './runtime/instance-resolve.js'
 import { getBuildVersion } from './build-version.js'
 import { benchmarkScrypt } from './crypto/password.js'
 import { checkAppTables, checkAuthTables, pingDatabase, pingPool, pool, probeDrizzleUserLookup, probeUserLookup } from './db/index.js'
@@ -329,9 +330,9 @@ app.use(
 app.all('/instance/*', async (c) => {
   const url = new URL(c.req.url)
   const slug = instanceSlugFromHostname(url.hostname)
-  const instanceId = Number.parseInt(slug, 10)
+  const instanceId = await resolveInstanceIdBySlug(slug)
 
-  if (!Number.isFinite(instanceId)) {
+  if (instanceId === null) {
     return c.json({ message: 'Invalid instance' }, 400)
   }
 
