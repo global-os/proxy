@@ -43,7 +43,8 @@ const createRenderer = () => {
       height: '100%',
       margin: 0,
       padding: 0,
-      fontFamily: 'Lato',
+      fontFamily:
+        'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
     },
     'html,body,#app'
   )

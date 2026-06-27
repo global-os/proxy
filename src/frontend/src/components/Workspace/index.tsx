@@ -22,9 +22,10 @@ const isLaunchableApp = (item: DesktopItem) =>
 const Frame = createComponent(
   () => ({
     position: 'relative',
-    background: '#e5a455ff',
+    background: '#e5a455',
     width: '100%',
     height: '100%',
+    minHeight: '100%',
     overflow: 'hidden',
   }),
   'div',
@@ -73,6 +74,8 @@ const IconShape = createComponent(
 const IconLabel = createComponent(
   () => ({
     fontSize: '11px',
+    fontFamily:
+      'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
     textAlign: 'center',
     maxWidth: '80px',
     overflow: 'hidden',

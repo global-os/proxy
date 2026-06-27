@@ -29,11 +29,23 @@ function RouteComponent() {
   }, [error, refetch])
 
   if (isPending || isRefetching) {
-    return <Page>Loading…</Page>
+    return (
+      <Page variant="workspace">
+        <div className="h-full flex items-center justify-center bg-[#e5a455] text-white/90 text-sm">
+          Loading…
+        </div>
+      </Page>
+    )
   }
 
   if (error) {
-    return <Page>Reconnecting…</Page>
+    return (
+      <Page variant="workspace">
+        <div className="h-full flex items-center justify-center bg-[#e5a455] text-white/90 text-sm">
+          Reconnecting…
+        </div>
+      </Page>
+    )
   }
 
   if (!session?.user) {
@@ -41,7 +53,7 @@ function RouteComponent() {
   }
 
   return (
-    <Page>
+    <Page variant="workspace">
       <Workspace sessionId={sessionId}>{{}}</Workspace>
     </Page>
   )

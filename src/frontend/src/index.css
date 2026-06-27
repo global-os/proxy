@@ -5,8 +5,12 @@
   --color-amber-light: rgb(240 178 60);
 }
 
-:root {
-  font-family: system-ui, Helvetica, Arial, sans-serif;
+:root,
+html,
+body {
+  height: 100%;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
@@ -15,5 +19,4 @@
 
 body {
   margin: 0;
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }

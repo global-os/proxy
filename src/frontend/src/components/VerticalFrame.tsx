@@ -9,7 +9,7 @@ export const VerticalFrame = ({ children, width }: PropsWithChildren<Props>) => 
   <div className="flex justify-center px-4 py-10 sm:py-12">
     <div
       style={{ width }}
-      className="max-w-full w-full flex flex-col items-center rounded-2xl bg-white text-gray-900
+      className="max-w-full w-full flex flex-col items-center rounded-2xl bg-white text-gray-900 font-sans
         shadow-[0_24px_64px_rgba(15,23,42,0.28),0_4px_16px_rgba(15,23,42,0.12)]"
     >
       <LogoSection href="/">
