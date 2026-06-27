@@ -72,8 +72,14 @@ async function parseTarBytes(tarBytes: Buffer): Promise<Map<string, Buffer>> {
   return files
 }
 
-export function isInstanceContentCached(instanceId: number): boolean {
-  return bundles.has(instanceId)
+export function isInstanceContentCached(
+  instanceId: number,
+  expectedChecksum?: string,
+): boolean {
+  const bundle = bundles.get(instanceId)
+  if (!bundle) return false
+  if (expectedChecksum && bundle.checksum !== expectedChecksum) return false
+  return true
 }
 
 export async function ensureInstanceContent(

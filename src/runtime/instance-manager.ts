@@ -118,13 +118,17 @@ async function loadInstanceReady(instanceId: number): Promise<boolean> {
     return false
   }
 
-  if (isInstanceContentCached(instanceId)) {
+  if (isInstanceContentCached(instanceId, row.directory_checksum)) {
     await touchInstance(instanceId)
     if (row.state !== 'running') {
       await persistInstanceReady(instanceId)
     }
     setInstancePrepareReady(instanceId)
     return true
+  }
+
+  if (isInstanceContentCached(instanceId)) {
+    await evictInstanceContent(instanceId)
   }
 
   let imageId = row.image_id

@@ -374,19 +374,16 @@ app.all('/instance/*', async (c) => {
     upstreamPath === '/index.html' ||
     upstreamPath.endsWith('/')
 
-  if (!isInstanceContentCached(instanceId)) {
-    scheduleInstancePrepare(instanceId)
-    if (wantsHtml) return c.html(instanceLoadingPage())
+  scheduleInstancePrepare(instanceId)
 
-    const ready = await ensureInstanceReady(instanceId)
-    if (!ready) {
-      return c.json({ message: 'Instance starting' }, 503, { 'Retry-After': '2' })
-    }
-  } else {
-    const ready = await ensureInstanceReady(instanceId)
-    if (!ready) {
-      return c.json({ message: 'Instance not available' }, 502)
-    }
+  if (!isInstanceContentCached(instanceId) && wantsHtml) {
+    return c.html(instanceLoadingPage())
+  }
+
+  const ready = await ensureInstanceReady(instanceId)
+  if (!ready) {
+    if (wantsHtml) return c.html(instanceLoadingPage())
+    return c.json({ message: 'Instance starting' }, 503, { 'Retry-After': '2' })
   }
 
   void touchInstance(instanceId).catch(() => {})

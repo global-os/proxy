@@ -118,40 +118,19 @@
   <div class="statusbar" id="statusbar"></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/yjs@13.6.18/dist/yjs.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/rxjs@7.8.1/dist/bundles/rxjs.umd.min.js"></script>
 <script>
-const { fromEvent, filter, map } = rxjs;
+let editorContent = '';
 
-// ── yjs ──────────────────────────────────────────────────────────────────────
+const applyContent = (content) => {
+  editorContent = content ?? '';
+};
 
-const doc      = new Y.Doc();
-const yContent = doc.getText('content');
-
-const applyContent = content => doc.transact(() => {
-  yContent.delete(0, yContent.length);
-  yContent.insert(0, content ?? '');
-});
-
-const getContent     = ()  => yContent.toString();
-const observeContent = fn  => { yContent.observe(fn); return () => yContent.unobserve(fn); };
-
-// ── state ─────────────────────────────────────────────────────────────────────
+const getContent = () => editorContent;
 
 const state = { status: 'waiting', filename: 'untitled', reason: null };
 let lastSavedContent = '';
 
-// ── messages ──────────────────────────────────────────────────────────────────
-
-const messages$ = fromEvent(window, 'message').pipe(
-  map(e => e.data),
-  filter(d => d && typeof d === 'object' && d.type)
-);
-
-const ofType   = type => filter(d => d.type === type);
-const toParent = msg  => window.parent.postMessage(msg, '*');
-
-// ── ui refs ───────────────────────────────────────────────────────────────────
+const toParent = (msg) => window.parent.postMessage(msg, '*');
 
 const $waiting  = document.getElementById('waiting');
 const $shell    = document.getElementById('shell');
@@ -187,8 +166,6 @@ const setSaved = () => {
   setTimeout(() => { $statusbar.textContent = ''; }, 3000);
 };
 
-// ── lifecycle ─────────────────────────────────────────────────────────────────
-
 const showEditor = () => {
   $waiting.style.display = 'none';
   $shell.style.display   = 'block';
@@ -198,17 +175,17 @@ const showEditor = () => {
 
 const init = ({ filename, content }) => {
   applyContent(content ?? '');
-  lastSavedContent     = content ?? '';
-  $editor.value        = getContent();
-  state.status         = 'ready';
-  state.filename       = filename ?? 'untitled';
-  state.reason         = null;
+  lastSavedContent = content ?? '';
+  $editor.value = getContent();
+  state.status = 'ready';
+  state.filename = filename ?? 'untitled';
+  state.reason = null;
   showEditor();
 };
 
-const initFresh = reason => {
-  state.status  = 'ready';
-  state.reason  = reason ?? 'fresh';
+const initFresh = (reason) => {
+  state.status = 'ready';
+  state.reason = reason ?? 'fresh';
   showEditor();
 };
 
@@ -225,29 +202,35 @@ const save = () => {
   toParent({ type: 'save', filename: state.filename, content: getContent() });
 };
 
-// ── wire up ───────────────────────────────────────────────────────────────────
+window.addEventListener('message', (event) => {
+  const data = event.data;
+  if (!data || typeof data !== 'object' || !data.type) return;
 
-messages$.pipe(ofType('init')).subscribe(init);
-messages$.pipe(ofType('init:fresh')).subscribe(d => initFresh(d.reason));
-messages$.pipe(ofType('save:complete')).subscribe(() => {
-  lastSavedContent = getContent();
-  state.status     = 'ready';
-  render();
-  setSaved();
-});
-messages$.pipe(ofType('die')).subscribe(async () => {
-  const result = await onDie();
-  toParent({ type: 'die:response', result });
+  switch (data.type) {
+    case 'init':
+      init(data);
+      break;
+    case 'init:fresh':
+      initFresh(data.reason);
+      break;
+    case 'save:complete':
+      lastSavedContent = getContent();
+      state.status = 'ready';
+      render();
+      setSaved();
+      break;
+    case 'die':
+      void onDie().then((result) => {
+        toParent({ type: 'die:response', result });
+      });
+      break;
+  }
 });
 
 $editor.addEventListener('input', () => applyContent($editor.value));
-observeContent(() => {
-  const v = getContent();
-  if ($editor.value !== v) $editor.value = v;
-});
 
 $saveBtn.addEventListener('click', save);
-document.addEventListener('keydown', e => {
+document.addEventListener('keydown', (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === 's') {
     e.preventDefault();
     save();
