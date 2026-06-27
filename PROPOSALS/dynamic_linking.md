@@ -35,15 +35,26 @@ We want **dynamic linking**: dependencies declared once in a manifest; the platf
 
 ## Layout
 
+**On the user's desktop** (authored, stored in DB):
+
 ```
 helloworld.gapp/
-  gapp.json       ← dependency manifest (this proposal)
-  index.html      ← app shell; no hardcoded CDN script tags
-  yjs.js          ← vendored copy when source = "bundled"
-  app.js          ← optional: app logic separated from HTML
+  gapp.json       ← manifest: deps + compile spec
+  index.html      ← static shell (DOM/CSS); no inline app logic
+  app.cljs        ← Squint source (user-authored)
 ```
 
-The manifest is part of the desktop directory tree, included in `collectTree` / `buildTar`, and served from the instance bundle like any other file.
+**Not on the desktop** — synthesized at image build by the platform, present only in `tar_bytes`:
+
+```
+  app.js          ← Squint compile output (never committed, never user-built)
+  yjs.js          ← vendored from platform registry when source = "bundled"
+  rxjs.js         ← same
+```
+
+Users do not run Squint, esbuild, or npm for their app. They save `.cljs` and HTML; GlobalOS compiles and vendors when `createImage` runs.
+
+The manifest and source files are part of the desktop tree (`collectTree`). Compiled and vendored artifacts are injected into the file list before `buildTar` and are not written back to the `file` table.
 
 ## Manifest: `gapp.json`
 
@@ -76,6 +87,54 @@ Recommended filename: **`gapp.json`** (lives at the root of the `.gapp` director
 | `entry` | no | Entry HTML file; default `index.html` |
 | `type` | no | `classic` (default) or `module` — affects bootstrap strategy |
 | `dependencies` | yes | Map of package id → link spec (see below) |
+| `compile` | no | Platform compile steps (Squint, etc.) — see below |
+
+### `compile` (Squint)
+
+When present, the platform compiles source files during **image build** (`createImage`), not on the user's machine.
+
+```json
+{
+  "name": "helloworld",
+  "entry": "index.html",
+  "type": "module",
+  "compile": {
+    "squint": {
+      "source": "app.cljs",
+      "output": "app.js",
+      "externals": {
+        "yjs": "Y",
+        "rxjs": "rxjs"
+      }
+    }
+  },
+  "dependencies": {
+    "yjs": { "version": "13.6.20", "source": "platform", "format": "iife", "global": "Y" },
+    "rxjs": { "version": "7.8.1", "source": "platform", "format": "iife", "global": "rxjs" }
+  }
+}
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `source` | yes | Squint entry path inside the `.gapp` directory |
+| `output` | yes | JS path emitted into the tar (referenced by `index.html`) |
+| `externals` | no | npm id → global name; deps loaded via `dependencies` before `output` runs |
+
+Rules:
+
+- `output` must **not** exist as a user file on the desktop. If it does, image build **replaces** it with compile output (warn in logs).
+- Squint CLI is a **platform** dependency (`package.json` on GlobalOS), pinned per deploy.
+- `directory_checksum` hashes **source only** (DB tree). Recompile happens whenever source changes or platform compiler/registry versions change (cache key includes both).
+- Compile failures surface as image-build errors with Squint stderr, not silent iframe `ReferenceError`s.
+
+`index.html` references synthesized assets only:
+
+```html
+<script type="module" src="app.js"></script>
+```
+
+Dependency `<script>` tags are injected by the platform (serve-time HTML rewrite or bootstrap); the user does not list them.
 
 ### Dependency link spec
 
@@ -201,7 +260,7 @@ Align with existing launch/serve split:
 | Phase | Work |
 |-------|------|
 | **Launch** (`POST …/launch`) | No dependency resolution. Fast path only. |
-| **Image build** (`getOrCreateImage` / `createImage`) | Read `gapp.json` if present; vendor `cdn` deps into tar; validate `bundled` paths exist; optional platform registry fetch |
+| **Image build** (`getOrCreateImage` / `createImage`) | Read `gapp.json`; run `compile.squint` if present; vendor `platform`/`cdn` deps into tar; validate `bundled` paths exist; inject synthesized files into tar only |
 | **Instance prepare** (`ensureInstanceReady`) | Parse tar; validate manifest hash alongside directory checksum |
 | **Serve** (`/instance/…`) | Inject scripts or serve bootstrap; then serve `entry` |
 
@@ -295,7 +354,7 @@ Load order:
 
 1. **Filename** — `gapp.json` vs `manifest.json` vs `Bundle.toml`? Prefer `gapp.json` for clarity.
 2. **Transitive deps** — v1: flat `dependencies` only; app vendors bundles. Later: platform could expand a lockfile.
-3. **Dev workflow** — `npm run bundle:helloworld-yjs` vs generic `gapp vendor yjs@13.6.20` CLI.
+3. **Maintainer vendoring** — `npm run bundle:helloworld-yjs` updates the **platform registry**, not user desktops. Users never run vendor/compile scripts.
 4. **Integrity for bundled** — optional hash in manifest to detect tampering inside tar.
 
 ## Summary
@@ -306,6 +365,7 @@ Load order:
 | Default source | `bundled` |
 | CDN | Allowed with `integrity`; vendored at image build |
 | Load mechanism | Server injects scripts into `entry` HTML (v1) |
-| Critical example | Yjs as `bundled` `yjs.js`, `format: iife`, `global: Y` |
+| Critical example | Yjs as `platform`/`bundled` IIFE `global: Y` |
+| App logic | User writes `app.cljs`; platform emits `app.js` at image build |
 
-This gives declarative dynamic linking without trusting brittle CDN paths, while fitting the existing `.gapp` → `image` → instance serve pipeline.
+This gives declarative dynamic linking without trusting brittle CDN paths, while fitting the existing `.gapp` → `image` → instance serve pipeline. Users author source; GlobalOS compiles and links.

@@ -4,6 +4,7 @@ import * as tar from "tar";
 import { PassThrough } from "stream";
 import { db } from "./index.js";
 import { directory, image } from "./schema.js";
+import { compileGappTree } from "../gapp/compile-gapp.js";
 import { hashDir, hashTree, collectTree, type DirEntry, type FileEntry } from "./file.js";
 
 type InnerFns = {
@@ -179,7 +180,8 @@ export async function createImage(directoryId: number): Promise<number> {
   const dirName = dirRow[0].name;
   const { dirs, files } = await collectTree(directoryId, dirName);
   const directory_checksum = hashTree(dirs, files);
-  const tar_bytes = await buildTar(dirName, dirs, files);
+  const compiledFiles = await compileGappTree(dirName, files);
+  const tar_bytes = await buildTar(dirName, dirs, compiledFiles);
   const tar_checksum = createHash("sha1").update(tar_bytes).digest("hex");
 
   const [row] = await db

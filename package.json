@@ -14,11 +14,14 @@
     "build:www": "cd src/www && npm install && npm run build",
     "build": "node scripts/write-build-version.mjs && npm run-script build:www && npm run-script build:frontend && npm run-script build:backend",
     "start": "node dist/src/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --import tsx --test src/bundle/tbundle/**/*.test.ts",
+    "test:tbundle": "npm run test",
     "format": "prettier -w src/frontend/src/**/*.{ts,tsx} **/*.{ts,tsx} ./drizzle.config.ts",
     "db:migrate": "node scripts/apply-pending-migrations.mjs",
     "bundle:helloworld-yjs": "node scripts/bundle-helloworld-yjs.mjs",
-    "vercel-build": "npm install && (cd src/frontend && npm install --legacy-peer-deps) && (cd src/www && npm install) && node scripts/apply-pending-migrations.mjs && node scripts/write-build-version.mjs && npm run build && node scripts/verify-frontend-bundle.mjs && node scripts/sync-public-assets.mjs"
+    "bundle:platform-deps": "node scripts/bundle-platform-yjs.mjs && node scripts/bundle-platform-rxjs.mjs",
+    "build:squint-editor-example": "node --import tsx scripts/build-squint-editor-example-tar.mjs",
+    "vercel-build": "npm install && npm run bundle:platform-deps && (cd src/frontend && npm install --legacy-peer-deps) && (cd src/www && npm install) && node scripts/apply-pending-migrations.mjs && node scripts/write-build-version.mjs && npm run build && node scripts/verify-frontend-bundle.mjs && node scripts/sync-public-assets.mjs"
   },
   "version": "1.0.0",
   "description": "",
@@ -49,10 +52,12 @@
     "tar": "^7.5.16",
     "tsx": "^4.19.4",
     "typescript": "^5.9.3",
+    "squint-cljs": "^0.14.196",
     "yjs": "^13.6.20"
   },
   "devDependencies": {
     "@tanstack/router-cli": "^1.157.16",
-    "@types/picomatch": "^3.0.0"
+    "@types/picomatch": "^3.0.0",
+    "rxjs": "^7.8.1"
   }
 }
