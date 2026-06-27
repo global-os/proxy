@@ -4,7 +4,7 @@ import * as tar from "tar";
 import { PassThrough, Readable } from "stream";
 import { db } from "./index.js";
 import { directory, image } from "./schema.js";
-import { hashDir, collectTree, type DirEntry, type FileEntry } from "./file.js";
+import { hashDir, hashTree, collectTree, type DirEntry, type FileEntry } from "./file.js";
 
 type InnerFns = {
   // listFiles: () => Promise<{ id: number; name: string; mime_type: string }[]>;
@@ -157,8 +157,8 @@ export async function createImage(directoryId: number): Promise<number> {
   if (!dirRow[0]) throw new Error(`Directory ${directoryId} not found`);
 
   const dirName = dirRow[0].name;
-  const directory_checksum = await hashDir(directoryId);
   const { dirs, files } = await collectTree(directoryId, dirName);
+  const directory_checksum = hashTree(dirs, files);
   const tar_bytes = await buildTar(dirName, dirs, files);
   const tar_checksum = createHash("sha1").update(tar_bytes).digest("hex");
 

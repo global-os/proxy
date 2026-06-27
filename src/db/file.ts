@@ -44,9 +44,7 @@ export async function hashFile(fileId: number): Promise<string> {
   return createHash("sha1").update(row[0].content).digest("hex");
 }
 
-export async function hashDir(dirId: number): Promise<string> {
-  const { dirs, files } = await collectTree(dirId, "");
-
+export function hashTree(dirs: DirEntry[], files: FileEntry[]): string {
   const hash = createHash("sha1");
   for (const f of files) {
     hash.update(f.name);
@@ -62,4 +60,9 @@ export async function hashDir(dirId: number): Promise<string> {
     hash.update('\x00');
   }
   return hash.digest("hex");
+}
+
+export async function hashDir(dirId: number): Promise<string> {
+  const { dirs, files } = await collectTree(dirId, "");
+  return hashTree(dirs, files);
 }

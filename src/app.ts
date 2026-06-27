@@ -17,8 +17,10 @@ import { auth } from './auth.js'
 import authRoutes from './routes/auth.js'
 import fsRoutes from './routes/fs.js'
 import programsRoutes from './routes/programs.js'
+import { scheduleInstancePrepare } from './runtime/instance-background.js'
 import { ensureInstanceReady, touchInstance } from './runtime/instance-manager.js'
-import { INSTANCE_MIME, resolveCachedInstanceFile } from './runtime/instance-content.js'
+import { INSTANCE_MIME, isInstanceContentCached, resolveCachedInstanceFile } from './runtime/instance-content.js'
+import { instanceLoadingPage } from './runtime/instance-loading-page.js'
 import { instanceSlugFromHostname, stripInstancePrefix } from './runtime/instance-proxy.js'
 import { resolveInstanceIdBySlug } from './runtime/instance-resolve.js'
 import { getBuildVersion } from './build-version.js'
@@ -338,35 +340,48 @@ app.all('/instance/*', async (c) => {
 
   const upstreamPath = stripInstancePrefix(url.pathname, slug)
 
-  if (upstreamPath === '/__status') {
-    const ready = await ensureInstanceReady(instanceId)
-    return c.json({ ready })
-  }
+  const wantsHtml =
+    upstreamPath === '/' ||
+    upstreamPath === '/index.html' ||
+    upstreamPath.endsWith('/')
 
-  const ready = await ensureInstanceReady(instanceId)
-  if (!ready) {
-    return c.json({ message: 'Instance not available' }, 502)
+  if (!isInstanceContentCached(instanceId)) {
+    scheduleInstancePrepare(instanceId)
+    const ready = await Promise.race([
+      ensureInstanceReady(instanceId),
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 8_000)),
+    ])
+
+    if (!ready) {
+      if (wantsHtml) return c.html(instanceLoadingPage())
+      return c.json({ message: 'Instance starting' }, 503, { 'Retry-After': '2' })
+    }
+  } else {
+    const ready = await ensureInstanceReady(instanceId)
+    if (!ready) {
+      return c.json({ message: 'Instance not available' }, 502)
+    }
   }
 
   void touchInstance(instanceId).catch(() => {})
 
-  const filePath = resolveCachedInstanceFile(instanceId, upstreamPath)
-  if (!filePath) {
+  const file = resolveCachedInstanceFile(instanceId, upstreamPath)
+  if (!file) {
     return c.notFound()
   }
 
-  const ext = path.extname(filePath)
+  const ext = path.extname(file.path)
   const contentType = INSTANCE_MIME[ext] ?? 'application/octet-stream'
 
-  console.log(`[instance] ${c.req.method} ${url.pathname} -> ${filePath}`)
+  console.log(`[instance] ${c.req.method} ${url.pathname} -> ${file.path}`)
 
   if (contentType.includes('text/html')) {
-    const text = fs.readFileSync(filePath, 'utf-8')
+    const text = file.data.toString('utf-8')
     const transformed = replaceDomainInHTML(text, 'localhost', url.host, c.get('isLocal'))
     return c.html(transformed)
   }
 
-  return c.body(fs.readFileSync(filePath), 200, { 'Content-Type': contentType })
+  return c.body(new Uint8Array(file.data), 200, { 'Content-Type': contentType })
 })
 
 ;['/app/*', '/app/**', '/app'].forEach((route) => {

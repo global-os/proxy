@@ -7,11 +7,11 @@ import {
   ensureInstanceContent,
   evictInstanceContent,
   isInstanceContentCached,
-  tryRecoverInstanceContent,
 } from './instance-content.js'
 import { INSTANCE_IDLE_MS, CLEANUP_INTERVAL_MS } from './constants.js'
 
 const activeInstances = new Map<number, number>()
+const preparing = new Map<number, Promise<boolean>>()
 
 export async function touchInstance(instanceId: number): Promise<void> {
   activeInstances.set(instanceId, Date.now())
@@ -93,8 +93,7 @@ export async function isInstanceDbReady(instanceId: number): Promise<boolean> {
   return row?.state === 'running'
 }
 
-/** Ensure instance bundle is extracted and ready to serve. */
-export async function ensureInstanceReady(instanceId: number): Promise<boolean> {
+async function loadInstanceReady(instanceId: number): Promise<boolean> {
   const [row] = await db
     .select({
       id: schema.instances.id,
@@ -144,12 +143,7 @@ export async function ensureInstanceReady(instanceId: number): Promise<boolean> 
 
   if (!imageId) return false
 
-  if (await tryRecoverInstanceContent(instanceId, checksum)) {
-    await touchInstance(instanceId)
-    await persistInstanceReady(instanceId)
-    return true
-  }
-
+  const loadStart = Date.now()
   const [imageRow] = await db
     .select({ tar_bytes: schema.image.tar_bytes })
     .from(schema.image)
@@ -158,8 +152,26 @@ export async function ensureInstanceReady(instanceId: number): Promise<boolean> 
 
   if (!imageRow?.tar_bytes) return false
 
+  console.log(
+    `[instance] loaded tar for ${instanceId} (${imageRow.tar_bytes.length} bytes) +${Date.now() - loadStart}ms`,
+  )
+
+  const extractStart = Date.now()
   await startInstanceRuntime(instanceId, checksum, imageRow.tar_bytes)
+  console.log(`[instance] parsed tar for ${instanceId} +${Date.now() - extractStart}ms`)
   await persistInstanceReady(instanceId)
   return true
+}
+
+/** Ensure instance bundle is parsed and ready to serve. */
+export async function ensureInstanceReady(instanceId: number): Promise<boolean> {
+  const inflight = preparing.get(instanceId)
+  if (inflight) return inflight
+
+  const work = loadInstanceReady(instanceId).finally(() => {
+    preparing.delete(instanceId)
+  })
+  preparing.set(instanceId, work)
+  return work
 }
 

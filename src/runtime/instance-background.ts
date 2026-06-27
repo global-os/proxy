@@ -7,23 +7,10 @@ type VercelRequestContext = {
 
 export const vercelContext = new AsyncLocalStorage<VercelRequestContext>()
 
-const preparing = new Set<number>()
-
-export function isInstancePrepareInFlight(instanceId: number): boolean {
-  return preparing.has(instanceId)
-}
-
 export function scheduleInstancePrepare(instanceId: number): void {
-  if (preparing.has(instanceId)) return
-
-  preparing.add(instanceId)
-  const work = ensureInstanceReady(instanceId)
-    .catch((err) => {
-      console.error(`[instance] prepare failed for ${instanceId}:`, err)
-    })
-    .finally(() => {
-      preparing.delete(instanceId)
-    })
+  const work = ensureInstanceReady(instanceId).catch((err) => {
+    console.error(`[instance] prepare failed for ${instanceId}:`, err)
+  })
 
   const ctx = vercelContext.getStore()
   if (ctx?.waitUntil) {

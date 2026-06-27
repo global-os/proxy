@@ -1,10 +1,6 @@
-import fs from 'node:fs'
-import os from 'node:os'
 import path from 'node:path'
 import { Readable } from 'node:stream'
 import * as tar from 'tar'
-
-const roots = new Map<number, { rootDir: string; checksum: string }>()
 
 export const INSTANCE_MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -16,119 +12,103 @@ export const INSTANCE_MIME: Record<string, string> = {
   '.txt': 'text/plain; charset=utf-8',
 }
 
-async function extractTar(tarBytes: Buffer, destDir: string): Promise<void> {
-  fs.mkdirSync(destDir, { recursive: true })
-  const readable = Readable.from(tarBytes)
-  await tar.extract({ cwd: destDir }, readable as any)
+type InstanceBundle = {
+  checksum: string
+  files: Map<string, Buffer>
 }
 
-function findIndexHtml(rootDir: string): string | null {
-  const direct = path.join(rootDir, 'index.html')
-  if (fs.existsSync(direct)) return direct
-  for (const entry of fs.readdirSync(rootDir, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue
-    const nested = path.join(rootDir, entry.name, 'index.html')
-    if (fs.existsSync(nested)) return nested
+const bundles = new Map<number, InstanceBundle>()
+
+function findIndexPath(files: Map<string, Buffer>): string | null {
+  if (files.has('index.html')) return 'index.html'
+  for (const entryPath of files.keys()) {
+    if (entryPath.endsWith('/index.html')) return entryPath
   }
   return null
 }
 
-export function resolveInstanceFile(rootDir: string, urlPath: string): string | null {
-  const safePath = path.normalize(urlPath).replace(/^(\.\.(\/|\\|$))+/, '')
+function resolveBundlePath(files: Map<string, Buffer>, urlPath: string): string | null {
+  const safePath = urlPath.replace(/^(\.\.(\/|\\|$))+/, '')
   const relative = safePath === '/' ? '' : safePath.replace(/^\//, '')
-  const candidate = path.join(rootDir, relative)
-  if (!candidate.startsWith(rootDir)) return null
 
-  if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
-    return candidate
+  if (relative && files.has(relative)) return relative
+
+  if (relative) {
+    const withSlash = relative.endsWith('/') ? relative : `${relative}/`
+    const indexCandidate = `${withSlash}index.html`
+    if (files.has(indexCandidate)) return indexCandidate
   }
 
-  if (fs.existsSync(path.join(candidate, 'index.html'))) {
-    return path.join(candidate, 'index.html')
-  }
-
-  if (relative === '' || relative.endsWith('/')) {
-    const index = findIndexHtml(rootDir)
-    if (index) return index
+  if (!relative || relative.endsWith('/')) {
+    return findIndexPath(files)
   }
 
   return null
+}
+
+async function parseTarBytes(tarBytes: Buffer): Promise<Map<string, Buffer>> {
+  const files = new Map<string, Buffer>()
+
+  await new Promise<void>((resolve, reject) => {
+    const parser = new tar.Parser({
+      onReadEntry(entry) {
+        if (entry.type !== 'File') {
+          entry.resume()
+          return
+        }
+
+        const chunks: Buffer[] = []
+        entry.on('data', (chunk: Buffer) => chunks.push(chunk))
+        entry.on('end', () => {
+          files.set(entry.path, Buffer.concat(chunks))
+        })
+      },
+    })
+    parser.on('end', () => resolve())
+    parser.on('error', reject)
+    Readable.from(tarBytes).pipe(parser)
+  })
+
+  return files
 }
 
 export function isInstanceContentCached(instanceId: number): boolean {
-  return roots.has(instanceId)
-}
-
-const tmpDirPrefix = (instanceId: number) => `globalos-instance-${instanceId}-`
-
-/** Re-register an extracted bundle after a serverless cold start (in-memory map was lost). */
-export async function tryRecoverInstanceContent(
-  instanceId: number,
-  checksum: string,
-): Promise<boolean> {
-  if (roots.has(instanceId)) return true
-
-  let entries: fs.Dirent[]
-  try {
-    entries = await fs.promises.readdir(os.tmpdir(), { withFileTypes: true })
-  } catch {
-    return false
-  }
-
-  const prefix = tmpDirPrefix(instanceId)
-  for (const entry of entries) {
-    if (!entry.isDirectory() || !entry.name.startsWith(prefix)) continue
-
-    const rootDir = path.join(os.tmpdir(), entry.name)
-    const marker = path.join(rootDir, '.globalos-checksum')
-    try {
-      const stored = (await fs.promises.readFile(marker, 'utf-8')).trim()
-      if (stored !== checksum) continue
-    } catch {
-      if (!findIndexHtml(rootDir)) continue
-    }
-
-    if (!findIndexHtml(rootDir)) continue
-    roots.set(instanceId, { rootDir, checksum })
-    console.log(`[instance] recovered ${instanceId} from ${rootDir}`)
-    return true
-  }
-
-  return false
+  return bundles.has(instanceId)
 }
 
 export async function ensureInstanceContent(
   instanceId: number,
   tarBytes: Buffer,
   checksum: string,
-): Promise<string> {
-  const existing = roots.get(instanceId)
-  if (existing?.checksum === checksum) {
-    return existing.rootDir
-  }
+): Promise<void> {
+  const existing = bundles.get(instanceId)
+  if (existing?.checksum === checksum) return
 
-  if (existing) {
-    await evictInstanceContent(instanceId)
-  }
-
-  const rootDir = await fs.promises.mkdtemp(
-    path.join(os.tmpdir(), `globalos-instance-${instanceId}-`),
-  )
-  await extractTar(tarBytes, rootDir)
-  await fs.promises.writeFile(path.join(rootDir, '.globalos-checksum'), checksum, 'utf-8')
-  roots.set(instanceId, { rootDir, checksum })
-  return rootDir
+  const files = await parseTarBytes(tarBytes)
+  bundles.set(instanceId, { checksum, files })
 }
 
 export async function evictInstanceContent(instanceId: number): Promise<void> {
-  const existing = roots.get(instanceId)
-  if (!existing) return
-  roots.delete(instanceId)
-  await fs.promises.rm(existing.rootDir, { recursive: true, force: true })
+  bundles.delete(instanceId)
 }
 
-export function resolveCachedInstanceFile(instanceId: number, urlPath: string): string | null {
-  const existing = roots.get(instanceId)
-  if (!existing) return null
-  return resolveInstanceFile(existing.rootDir, urlPath)
+export type InstanceFile = {
+  path: string
+  data: Buffer
+}
+
+export function resolveCachedInstanceFile(
+  instanceId: number,
+  urlPath: string,
+): InstanceFile | null {
+  const bundle = bundles.get(instanceId)
+  if (!bundle) return null
+
+  const entryPath = resolveBundlePath(bundle.files, urlPath)
+  if (!entryPath) return null
+
+  const data = bundle.files.get(entryPath)
+  if (!data) return null
+
+  return { path: entryPath, data }
 }
