@@ -22,7 +22,7 @@ const isLaunchableApp = (item: DesktopItem) =>
 const Frame = createComponent(
   () => ({
     position: 'relative',
-    background: '#e5a455',
+    background: '#aca8c3',
     width: '100%',
     height: '100%',
     minHeight: '100%',
@@ -63,9 +63,15 @@ const IconShape = createComponent(
   (_props: { isDir?: boolean }) => ({
     width: '48px',
     height: '48px',
-    background: 'rgba(255,255,255,0.75)',
-    borderRadius: '8px',
-    border: '1px solid rgba(0,0,0,0.12)',
+    background: '#c0c0c0',
+    borderRadius: 0,
+    borderWidth: '2px',
+    borderStyle: 'solid',
+    borderTopColor: '#ffffff',
+    borderLeftColor: '#ffffff',
+    borderBottomColor: '#808080',
+    borderRightColor: '#808080',
+    boxShadow: '1px 1px 0 rgba(0,0,0,0.2)',
   }),
   'div',
   ['isDir']
@@ -74,15 +80,14 @@ const IconShape = createComponent(
 const IconLabel = createComponent(
   () => ({
     fontSize: '11px',
-    fontFamily:
-      'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontFamily: 'Tahoma, "MS Sans Serif", "Segoe UI", ui-sans-serif, system-ui, sans-serif',
     textAlign: 'center',
     maxWidth: '80px',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
-    color: '#fff',
-    textShadow: '0 1px 2px rgba(0,0,0,0.6)',
+    color: '#ffffff',
+    textShadow: '1px 1px 0 #000000',
   }),
   'span'
 )

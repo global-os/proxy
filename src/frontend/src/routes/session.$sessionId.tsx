@@ -31,7 +31,7 @@ function RouteComponent() {
   if (isPending || isRefetching) {
     return (
       <Page variant="workspace">
-        <div className="h-full flex items-center justify-center bg-[#e5a455] text-white/90 text-sm">
+        <div className="h-full flex items-center justify-center bg-[#aca8c3] text-gray-800 text-sm font-sans">
           Loading…
         </div>
       </Page>
@@ -41,7 +41,7 @@ function RouteComponent() {
   if (error) {
     return (
       <Page variant="workspace">
-        <div className="h-full flex items-center justify-center bg-[#e5a455] text-white/90 text-sm">
+        <div className="h-full flex items-center justify-center bg-[#aca8c3] text-gray-800 text-sm font-sans">
           Reconnecting…
         </div>
       </Page>

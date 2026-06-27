@@ -2,7 +2,26 @@ import { MouseEvent } from 'react'
 import { createComponent } from 'react-fela'
 import { AppWindow } from './types'
 
-const accent = 'rgb(200, 128, 0)'
+const retroFont =
+  'Tahoma, "MS Sans Serif", "Segoe UI", ui-sans-serif, system-ui, sans-serif'
+
+const outsetBorder = {
+  borderWidth: '2px',
+  borderStyle: 'solid',
+  borderTopColor: '#ffffff',
+  borderLeftColor: '#ffffff',
+  borderBottomColor: '#808080',
+  borderRightColor: '#808080',
+}
+
+const insetBorder = {
+  borderWidth: '2px',
+  borderStyle: 'solid',
+  borderTopColor: '#808080',
+  borderLeftColor: '#808080',
+  borderBottomColor: '#ffffff',
+  borderRightColor: '#ffffff',
+}
 
 const Chrome = createComponent(
   ({
@@ -26,11 +45,13 @@ const Chrome = createComponent(
     height,
     top,
     left,
-    borderRadius: '10px',
+    borderRadius: 0,
     overflow: 'hidden',
-    background: '#12121a',
-    boxShadow:
-      '0 14px 36px rgba(0,0,0,0.38), 0 0 0 1px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)',
+    background: '#c0c0c0',
+    padding: '3px',
+    boxSizing: 'border-box',
+    ...outsetBorder,
+    boxShadow: '2px 2px 0 rgba(0,0,0,0.35)',
   })
 )
 
@@ -38,41 +59,33 @@ const TitleBar = createComponent(
   () => ({
     display: 'flex',
     alignItems: 'center',
-    gap: '10px',
-    padding: '7px 10px 6px',
-    minHeight: '36px',
+    gap: '6px',
+    padding: '2px 3px',
+    minHeight: '26px',
     userSelect: 'none',
     flex: '0 0 auto',
-    background: `linear-gradient(180deg, #4f4372 0%, #342a52 45%, #221a38 100%)`,
-    borderBottom: `2px solid ${accent}`,
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.14)',
+    fontFamily: retroFont,
+    background: 'linear-gradient(90deg, #4c1d95 0%, #7c3aed 38%, #6d28d9 62%, #4c1d95 100%)',
+    borderBottom: '1px solid #2e1065',
   }),
   'div',
   ['data-window-index', 'onMouseDown']
 )
 
-const TitleDots = createComponent(
+const TitleIcon = createComponent(
   () => ({
+    flex: '0 0 auto',
+    width: '16px',
+    height: '16px',
+    background: '#c0c0c0',
+    ...outsetBorder,
     display: 'flex',
     alignItems: 'center',
-    gap: '5px',
-    flex: '0 0 auto',
-  })
-)
-
-const TitleDot = createComponent(
-  ({ tone }: { tone?: 'accent' | 'muted' }) => ({
-    width: '8px',
-    height: '8px',
-    borderRadius: '50%',
-    background:
-      tone === 'accent'
-        ? `radial-gradient(circle at 30% 30%, #ffd68a, ${accent})`
-        : 'rgba(255,255,255,0.18)',
-    boxShadow:
-      tone === 'accent'
-        ? '0 0 6px rgba(200,128,0,0.55)'
-        : 'inset 0 1px 2px rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    fontSize: '10px',
+    lineHeight: 1,
+    color: '#4c1d95',
+    fontWeight: 700,
   })
 )
 
@@ -82,7 +95,8 @@ const TitleMeta = createComponent(
     minWidth: 0,
     display: 'flex',
     flexDirection: 'column',
-    gap: '1px',
+    gap: 0,
+    paddingLeft: '2px',
   })
 )
 
@@ -91,11 +105,12 @@ const TitleLabel = createComponent(
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
-    fontSize: '13px',
+    fontSize: '12px',
     fontWeight: 700,
-    letterSpacing: '0.03em',
-    color: '#faf3e6',
-    textShadow: '0 1px 2px rgba(0,0,0,0.55)',
+    fontFamily: retroFont,
+    letterSpacing: '0.01em',
+    color: '#ffffff',
+    textShadow: '1px 1px 0 rgba(0,0,0,0.45)',
   }),
   'span'
 )
@@ -106,40 +121,65 @@ const BundleHint = createComponent(
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
     fontSize: '10px',
-    fontWeight: 500,
-    color: 'rgba(250,243,230,0.55)',
-    letterSpacing: '0.02em',
+    fontWeight: 400,
+    fontFamily: retroFont,
+    color: 'rgba(255,255,255,0.72)',
   }),
   'span'
 )
 
-const CloseButton = createComponent(
-  () => ({
+const TitleButtons = createComponent(() => ({
+  display: 'flex',
+  alignItems: 'center',
+  gap: '2px',
+  flex: '0 0 auto',
+}))
+
+const ChromeButton = createComponent(
+  ({ active }: { active?: boolean }) => ({
     flex: '0 0 auto',
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '26px',
-    height: '26px',
-    borderRadius: '7px',
-    border: '1px solid rgba(255,255,255,0.14)',
-    background: 'rgba(255,255,255,0.07)',
-    color: '#f2dcc0',
-    fontSize: '17px',
-    lineHeight: 1,
+    width: '20px',
+    height: '20px',
+    borderRadius: 0,
     padding: 0,
-    cursor: 'pointer',
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1)',
-    transition: 'background 120ms ease, border-color 120ms ease, color 120ms ease',
-    ':hover': {
-      background: 'linear-gradient(180deg, #ff7b6b 0%, #c0392b 100%)',
-      borderColor: '#ffb3a8',
-      color: '#fff',
-    },
+    margin: 0,
+    fontFamily: retroFont,
+    fontSize: '11px',
+    fontWeight: 700,
+    lineHeight: 1,
+    color: '#000000',
+    background: '#c0c0c0',
+    cursor: active ? 'pointer' : 'default',
+    ...(active ? outsetBorder : outsetBorder),
+    ':hover': active
+      ? {
+          background: '#d4d4d4',
+        }
+      : {},
+    ':active': active
+      ? {
+          ...insetBorder,
+          paddingTop: '1px',
+          paddingLeft: '1px',
+        }
+      : {},
   }),
   'button',
-  ['type', 'onClick', 'onMouseDown', 'aria-label']
+  ['type', 'onClick', 'onMouseDown', 'aria-label', 'disabled']
 )
+
+const ContentFrame = createComponent(() => ({
+  flex: '1 1 auto',
+  minHeight: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  background: '#c0c0c0',
+  padding: '2px',
+  ...insetBorder,
+}))
 
 const ResizeHandle = createComponent(
   ({
@@ -168,8 +208,9 @@ const StyledIframe = createComponent(
     flex: '1 1 auto',
     minHeight: 0,
     width: '100%',
-    background: '#fff',
+    background: '#ffffff',
     pointerEvents: dragging ? 'none' : 'auto',
+    display: 'block',
   }),
   'iframe',
   ['src', 'innerRef']
@@ -205,34 +246,41 @@ export function WorkspaceWindow({
       zIndex={win.zIndex}
     >
       <TitleBar data-window-index={windowIndex} onMouseDown={onMouseDown}>
-        <TitleDots aria-hidden>
-          <TitleDot tone="accent" />
-          <TitleDot />
-          <TitleDot />
-        </TitleDots>
+        <TitleIcon aria-hidden>◆</TitleIcon>
         <TitleMeta>
           <TitleLabel>{win.title}</TitleLabel>
           {win.bundleName && win.bundleName !== `${win.title}.gapp` && (
             <BundleHint>{win.bundleName}</BundleHint>
           )}
         </TitleMeta>
-        <CloseButton
-          type="button"
-          aria-label={`Close ${win.title}`}
-          onMouseDown={e => e.stopPropagation()}
-          onClick={e => {
-            e.stopPropagation()
-            onClose()
-          }}
-        >
-          ×
-        </CloseButton>
+        <TitleButtons>
+          <ChromeButton type="button" disabled aria-label="Minimize" onMouseDown={e => e.stopPropagation()}>
+            <span style={{ marginTop: '-4px' }}>_</span>
+          </ChromeButton>
+          <ChromeButton type="button" disabled aria-label="Maximize" onMouseDown={e => e.stopPropagation()}>
+            □
+          </ChromeButton>
+          <ChromeButton
+            type="button"
+            active
+            aria-label={`Close ${win.title}`}
+            onMouseDown={e => e.stopPropagation()}
+            onClick={e => {
+              e.stopPropagation()
+              onClose()
+            }}
+          >
+            ×
+          </ChromeButton>
+        </TitleButtons>
       </TitleBar>
-      <StyledIframe
-        dragging={isInteracting}
-        src={win.src}
-        innerRef={onIframeRef}
-      />
+      <ContentFrame>
+        <StyledIframe
+          dragging={isInteracting}
+          src={win.src}
+          innerRef={onIframeRef}
+        />
+      </ContentFrame>
       <ResizeHandle
         cursor="nesw-resize"
         side="left"
