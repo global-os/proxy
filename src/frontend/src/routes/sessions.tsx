@@ -29,7 +29,7 @@ function RouteComponent() {
 
   return (
     <Page>
-      <VerticalFrame width="65em">
+      <VerticalFrame width="38em">
         <PageTitle>Sessions</PageTitle>
         <SessionList onLogOut={handleLogOut} isLoggingOut={isLoggingOut} />
       </VerticalFrame>

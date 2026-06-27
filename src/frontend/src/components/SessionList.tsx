@@ -150,11 +150,11 @@ export const SessionList = ({ onLogOut, isLoggingOut }: SessionListProps) => {
   const tabCls = cn(
     'flex-1 border-none rounded-[9px] px-3 py-[0.55em] text-[0.88em] font-semibold bg-transparent',
     'text-white/42 cursor-pointer transition-colors duration-100',
-    'data-[selected]:bg-amber/18 data-[selected]:text-amber-light',
+    'aria-selected:bg-amber/18 aria-selected:text-amber-light',
   )
 
   return (
-    <div className="w-full max-w-[36em]">
+    <div className="w-full">
       <Tabs.Root defaultValue="global-pc">
         {/* Tab bar */}
         <div className="p-1 rounded-xl bg-black/35 border border-white/7 mb-6">
