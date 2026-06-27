@@ -27,6 +27,13 @@ function findIndexPath(files: Map<string, Buffer>): string | null {
   return null
 }
 
+function indexDirectoryPrefix(files: Map<string, Buffer>): string | null {
+  const indexPath = findIndexPath(files)
+  if (!indexPath) return null
+  const slash = indexPath.lastIndexOf('/')
+  return slash >= 0 ? indexPath.slice(0, slash + 1) : ''
+}
+
 function resolveBundlePath(files: Map<string, Buffer>, urlPath: string): string | null {
   const safePath = urlPath.replace(/^(\.\.(\/|\\|$))+/, '')
   const relative = safePath === '/' ? '' : safePath.replace(/^\//, '')
@@ -34,6 +41,12 @@ function resolveBundlePath(files: Map<string, Buffer>, urlPath: string): string 
   if (relative && files.has(relative)) return relative
 
   if (relative) {
+    const indexDir = indexDirectoryPrefix(files)
+    if (indexDir) {
+      const sibling = `${indexDir}${relative}`
+      if (files.has(sibling)) return sibling
+    }
+
     const withSlash = relative.endsWith('/') ? relative : `${relative}/`
     const indexCandidate = `${withSlash}index.html`
     if (files.has(indexCandidate)) return indexCandidate

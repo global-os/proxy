@@ -118,14 +118,21 @@
   <div class="statusbar" id="statusbar"></div>
 </div>
 
+<script src="yjs.js"></script>
 <script>
-let editorContent = '';
+const doc = new Y.Doc();
+const yContent = doc.getText('content');
 
-const applyContent = (content) => {
-  editorContent = content ?? '';
+const applyContent = (content) => doc.transact(() => {
+  yContent.delete(0, yContent.length);
+  yContent.insert(0, content ?? '');
+});
+
+const getContent = () => yContent.toString();
+const observeContent = (fn) => {
+  yContent.observe(fn);
+  return () => yContent.unobserve(fn);
 };
-
-const getContent = () => editorContent;
 
 const state = { status: 'waiting', filename: 'untitled', reason: null };
 let lastSavedContent = '';
@@ -228,6 +235,10 @@ window.addEventListener('message', (event) => {
 });
 
 $editor.addEventListener('input', () => applyContent($editor.value));
+observeContent(() => {
+  const value = getContent();
+  if ($editor.value !== value) $editor.value = value;
+});
 
 $saveBtn.addEventListener('click', save);
 document.addEventListener('keydown', (e) => {
