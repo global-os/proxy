@@ -1,12 +1,160 @@
-See .env for db config
-Run this to migrate:
+# GlobalOS (PROXY)
 
-drizzle-kit generate
-drizzle-kit push
+Backend and SPA for [GlobalOS](https://app.app.onetrueos.com) — a browser-based desktop where users open workspace sessions, launch `.gapp` bundles from their virtual Desktop, and run apps in iframe windows served from per-instance subdomains.
 
-For local dev
+Production runs as a **single Vercel serverless function** (`api/index.ts` → Hono `src/app.ts`). Postgres holds users, filesystem metadata, app images (tarballs), processes, instances, and window layout.
+
+## Architecture
+
+```
+Browser (app.app.onetrueos.com)
+  ├── SPA (src/frontend) — sessions, workspace, auth UI
+  ├── /api/*             — auth, fs, launch, windows
+  └── iframe src:
+        {instanceId}.app.onetrueos.com  →  /instance/{id}/*  →  extracted .gapp from /tmp
+```
+
+**Launch flow**
+
+1. User clicks a `.gapp` on the Desktop → `POST /api/sessions/:id/launch`
+2. Server finds or creates a **process** (one per session + directory), ensures an **instance** (runtime slot)
+3. Server opens or focuses a **workspace window** with `src` pointing at `{instanceId}.app.onetrueos.com`
+4. First iframe request triggers **bundle resolve + extract** (`ensureInstanceReady`) — not during launch
+
+**Data model (simplified)**
+
+| Entity | Role |
+|--------|------|
+| `sessions` | Workspace (per user) |
+| `process` | One per session + `.gapp` directory |
+| `instances` | Runtime for a process; subdomain slug = `instances.id` |
+| `workspace_window` | Persisted window geometry + iframe target |
+| `directory` / `file` | Virtual FS (RLS-scoped per user) |
+| `image` | Cached tar snapshot of a `.gapp` directory |
+
+Hostname-based routing lives in `src/utils.ts` — `app.app.*` paths map to `/app/...`; `*.app.*` maps to `/instance/{slug}/...`.
+
+## Requirements
+
+- Node 24.x, npm ≥ 10
+- PostgreSQL
+
+## Environment variables
+
+| Variable | Required | Notes |
+|----------|----------|-------|
+| `DATABASE_URL` | yes | Postgres connection string |
+| `BETTER_AUTH_SECRET` | yes | Auth signing secret |
+| `BETTER_AUTH_URL` | prod | Defaults to `https://app.app.onetrueos.com` |
+| `DATABASE_SSL` | prod | Set `true` for managed Postgres (e.g. Neon) |
+| `DATABASE_IPV4` | optional | Force IPv4 if needed |
+| `POSTMARK_SERVER_TOKEN` | optional | Password reset email; logs link in dev without it |
+| `POSTMARK_FROM_EMAIL` | optional | Default `noreply@onetrueos.com` |
+| `INSTANCE_DOMAIN_SUFFIX` | optional | Default `app.onetrueos.com` in production |
+| `INSTANCE_PUBLIC_*` | optional | Override iframe origin in dev |
+
+See `.env` for local values.
+
+## Local development
+
+```bash
+npm install
+(cd src/frontend && npm install --legacy-peer-deps)
+
+# Terminal 1 — API on :3000
+npm run dev:backend
+
+# Terminal 2 — Vite SPA (proxies /api to backend)
+npm run dev:frontend
+```
+
+Local Postgres example:
+
+```
 DATABASE_URL=postgresql://yourusername@localhost:5432/postgres
+```
 
-To regenerate routes
-cd src/frontend
-yarn regenerate
+### Database migrations
+
+**Generate + push (local):**
+
+```bash
+npx drizzle-kit generate
+npx drizzle-kit push
+```
+
+**Apply known production migrations manually:**
+
+```bash
+DATABASE_URL=... node scripts/apply-pending-migrations.mjs
+```
+
+The script applies migrations listed in `scripts/apply-pending-migrations.mjs` (idempotent skips for existing objects).
+
+### Frontend routes
+
+TanStack Router — regenerate after adding routes:
+
+```bash
+cd src/frontend && npm run regenerate
+```
+
+## Build & deploy
+
+Vercel project: `global-os` (team `philip-petersons-projects`).
+
+```bash
+npm run vercel-build   # full production build
+```
+
+`vercel.json` rewrites all traffic to `api/index.ts` (30s `maxDuration`). Build stamps git SHA into `src/build-version.json` for the landing page and app shell.
+
+Push to `main` triggers deploy + GitHub Actions health check against `/health`.
+
+## API surface (public paths)
+
+Paths below are as seen by the browser; internally they are prefixed with `/app` via `src/utils.ts`.
+
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| GET | `/health` | no | Liveness: DB, schema, config, bundle, auth probe |
+| GET | `/debug` | no | Deep diagnostics (tables, migrations, scrypt, auth probe) |
+| POST | `/api/auth/*` | — | better-auth (sign-in, sign-up, session) |
+| GET | `/api/fs/desktop` | yes | Desktop items for workspace |
+| GET | `/api/sessions/:id/windows` | yes | Restore window layout |
+| POST | `/api/sessions/:id/launch` | yes | Launch or focus a `.gapp` |
+| GET | `/{instanceId}.app.../` | no | Serve extracted app static files |
+
+## Operations
+
+**Health check** (`GET /health`) returns `503` when degraded. Checks include:
+
+- `DATABASE_URL` and `BETTER_AUTH_SECRET` present
+- Frontend bundle on disk (`index.html`, `build-version.json`)
+- DB pool + auth tables + app tables (`instances`, `workspace_window`, `verification`)
+- Auth handler probe (POST sign-in expecting non-5xx)
+
+**Debug** (`GET /debug`) adds migration status, full table list, scrypt benchmark, and request env (`hasRawBody`).
+
+**Logs:** Vercel runtime logs — filter by route (`/api/sessions/1/launch`) or `[launch]` / `[instance]` prefixes.
+
+## Project layout
+
+```
+api/index.ts              Vercel entry (buffers POST body, then Hono)
+src/app.ts                Routes, static assets, instance serving
+src/routes/               auth, fs, programs (launch/windows)
+src/services/             launch-program, window-service, create-instance
+src/runtime/              tar extract, instance cache, subdomain helpers
+src/db/                   Drizzle schema, pool, image/file helpers
+src/frontend/             React SPA (TanStack Router, Fela, workspace UI)
+src/frontend/src/kernel/  postMessage bridge to iframe apps (opaque per-process state)
+drizzle/                  SQL migrations
+scripts/                  build, migrations, asset sync
+```
+
+## Known constraints (Vercel serverless)
+
+- **Post body:** `api/index.ts` pre-buffers `IncomingMessage` into `rawBody` before Hono runs; auth rebuilds a buffered `Request` for better-auth.
+- **DB pool:** `max: 3` on Vercel. `/api/fs` uses `setRlsUser` with `c.get('db')`; programs routes do **not** (would deadlock with global `db` + pool size 1).
+- **Launch latency:** Launch must not `SELECT tar_bytes` or extract tarballs — that work runs in `ensureInstanceReady` on the first iframe load. First open may take longer than the launch API response.
