@@ -1,16 +1,16 @@
-import { execFile } from 'node:child_process'
+import { createRequire } from 'node:module'
 import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import { promisify } from 'node:util'
+import * as esbuild from 'esbuild'
+import { compileString } from 'squint-cljs/node-api.js'
 import { formatExecError } from './exec-error.js'
-import { projectRoot } from './registry-paths.js'
-import { esbuildBinPath, squintCliPath } from './tool-paths.js'
-import type { SquintCompileSpec } from './types.js'
 
-const squintPkg = path.join(projectRoot, 'node_modules/squint-cljs')
+const require = createRequire(import.meta.url)
 
-const execFileAsync = promisify(execFile)
+function squintPackageDir(): string {
+  return path.dirname(require.resolve('squint-cljs/node-api.js'))
+}
 
 function globalBanner(externals: Record<string, string>): string {
   const lines = Object.entries(externals).map(
@@ -19,80 +19,72 @@ function globalBanner(externals: Record<string, string>): string {
   return lines.join('')
 }
 
-async function runCommand(
-  command: string,
-  args: string[],
-  opts: { cwd: string; label: string },
-): Promise<void> {
-  try {
-    await execFileAsync(command, args, {
-      cwd: opts.cwd,
-      env: {
-        ...process.env,
-        HOME: process.env.HOME ?? os.tmpdir(),
-        npm_config_cache: path.join(os.tmpdir(), 'npm-cache'),
-      },
-      maxBuffer: 10 * 1024 * 1024,
-    })
-  } catch (err) {
-    const formatted = formatExecError(err)
-    const error = new Error(`${opts.label}: ${formatted.message}`)
-    if (formatted.detail) {
-      ;(error as Error & { detail?: string }).detail = formatted.detail
-    }
-    throw error
-  }
-}
-
 export async function compileSquintSource(
   sourcePath: string,
-  spec: SquintCompileSpec,
-  opts?: { cwd?: string },
+  spec: { output: string; externals?: Record<string, string> },
 ): Promise<Buffer> {
-  const cwd = opts?.cwd ?? process.cwd()
-  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'gapp-squint-'))
   const ext = path.extname(spec.output) || '.js'
+  const source = await fs.readFile(sourcePath, 'utf8')
+  const squintPkg = squintPackageDir()
+  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'gapp-squint-'))
 
   try {
-    const squintCwd = path.dirname(sourcePath)
-    const squintCli = squintCliPath()
-    await runCommand(
-      process.execPath,
-      [squintCli, 'compile', sourcePath, '--extension', ext],
-      { cwd, label: `squint compile (${squintCli})` },
-    )
-
-    const compiledName = path.basename(sourcePath, path.extname(sourcePath)) + ext
-    const compiledPath = path.join(squintCwd, compiledName)
-
-    const externals = spec.externals ?? {}
-    const globalNames = [...new Set(Object.values(externals))]
-    const banner =
-      globalNames.length > 0 ? globalBanner(externals) : undefined
-
-    const bundleOut = path.join(tmp, 'bundle.js')
-    const esbuildArgs = [
-      compiledPath,
-      '--bundle',
-      '--format=esm',
-      '--platform=browser',
-      `--outfile=${bundleOut}`,
-    ]
-    if (banner) {
-      esbuildArgs.push(`--banner:js=${banner}`)
+    let compiled: { javascript?: string }
+    try {
+      compiled = await compileString(source, {
+        extension: ext,
+        'filename': path.basename(sourcePath),
+      })
+    } catch (err) {
+      const formatted = formatExecError(err)
+      const error = new Error(`squint compile: ${formatted.message}`)
+      if (formatted.detail) {
+        ;(error as Error & { detail?: string }).detail = formatted.detail
+      }
+      throw error
     }
 
-    esbuildArgs.push(
-      `--alias:squint-cljs/core.js=${path.join(squintPkg, 'core.js')}`,
-      `--alias:squint-cljs/src/squint/multi.js=${path.join(squintPkg, 'src/squint/multi.js')}`,
-    )
+    const javascript = compiled.javascript
+    if (!javascript) {
+      throw new Error('squint compile: no javascript output')
+    }
 
-    const esbuildBin = esbuildBinPath()
-    await runCommand(esbuildBin, esbuildArgs, {
-      cwd: projectRoot,
-      label: `esbuild bundle (${esbuildBin})`,
-    })
-    return fs.readFile(bundleOut)
+    const externals = spec.externals ?? {}
+    const banner = globalBanner(externals)
+
+    const entryPath = path.join(tmp, 'entry.js')
+    await fs.writeFile(entryPath, javascript)
+
+    try {
+      const result = await esbuild.build({
+        entryPoints: [entryPath],
+        bundle: true,
+        format: 'esm',
+        platform: 'browser',
+        write: false,
+        banner: banner ? { js: banner } : undefined,
+        alias: {
+          'squint-cljs/core.js': path.join(squintPkg, 'core.js'),
+          'squint-cljs/src/squint/multi.js': path.join(
+            squintPkg,
+            'src/squint/multi.js',
+          ),
+        },
+      })
+
+      const output = result.outputFiles[0]?.contents
+      if (!output) {
+        throw new Error('esbuild bundle: no output')
+      }
+      return Buffer.from(output)
+    } catch (err) {
+      const formatted = formatExecError(err)
+      const error = new Error(`esbuild bundle: ${formatted.message}`)
+      if (formatted.detail) {
+        ;(error as Error & { detail?: string }).detail = formatted.detail
+      }
+      throw error
+    }
   } finally {
     await fs.rm(tmp, { recursive: true, force: true })
   }
