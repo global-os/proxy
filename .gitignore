@@ -8,3 +8,4 @@ public/index.html
 fixtures/tar-examples/**
 !fixtures/tar-examples/.gitkeep
 src/gapp/registry/*.js
+src/gapp/registry/squint-cljs/

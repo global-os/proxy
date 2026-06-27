@@ -1,15 +1,26 @@
 import { createRequire } from 'node:module'
-import fs from 'node:fs/promises'
+import fs from 'node:fs'
+import fsp from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import * as esbuild from 'esbuild'
 import { compileString } from 'squint-cljs/node-api.js'
 import { formatExecError } from './exec-error.js'
+import { platformRegistryDir } from './registry-paths.js'
 
 const require = createRequire(import.meta.url)
 
-function squintPackageDir(): string {
+function squintRuntimeSourceDir(): string {
+  const staged = path.join(platformRegistryDir, 'squint-cljs')
+  if (fs.existsSync(path.join(staged, 'core.js'))) return staged
   return path.dirname(require.resolve('squint-cljs/node-api.js'))
+}
+
+async function stageSquintRuntime(tmp: string): Promise<void> {
+  const src = squintRuntimeSourceDir()
+  const dest = path.join(tmp, 'node_modules', 'squint-cljs')
+  await fsp.mkdir(path.dirname(dest), { recursive: true })
+  await fsp.cp(src, dest, { recursive: true })
 }
 
 function globalBanner(externals: Record<string, string>): string {
@@ -24,9 +35,8 @@ export async function compileSquintSource(
   spec: { output: string; externals?: Record<string, string> },
 ): Promise<Buffer> {
   const ext = path.extname(spec.output) || '.js'
-  const source = await fs.readFile(sourcePath, 'utf8')
-  const squintPkg = squintPackageDir()
-  const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'gapp-squint-'))
+  const source = await fsp.readFile(sourcePath, 'utf8')
+  const tmp = await fsp.mkdtemp(path.join(os.tmpdir(), 'gapp-squint-'))
 
   try {
     let compiled: { javascript?: string }
@@ -53,7 +63,8 @@ export async function compileSquintSource(
     const banner = globalBanner(externals)
 
     const entryPath = path.join(tmp, 'entry.js')
-    await fs.writeFile(entryPath, javascript)
+    await fsp.writeFile(entryPath, javascript)
+    await stageSquintRuntime(tmp)
 
     try {
       const result = await esbuild.build({
@@ -63,13 +74,6 @@ export async function compileSquintSource(
         platform: 'browser',
         write: false,
         banner: banner ? { js: banner } : undefined,
-        alias: {
-          'squint-cljs/core.js': path.join(squintPkg, 'core.js'),
-          'squint-cljs/src/squint/multi.js': path.join(
-            squintPkg,
-            'src/squint/multi.js',
-          ),
-        },
       })
 
       const output = result.outputFiles[0]?.contents
@@ -86,6 +90,6 @@ export async function compileSquintSource(
       throw error
     }
   } finally {
-    await fs.rm(tmp, { recursive: true, force: true })
+    await fsp.rm(tmp, { recursive: true, force: true })
   }
 }

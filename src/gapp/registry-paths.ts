@@ -10,6 +10,11 @@ function resolveProjectRoot(): string {
   ]
 
   for (const root of candidates) {
+    const stagedSquint = path.join(
+      root,
+      'src/gapp/registry/squint-cljs/core.js',
+    )
+    if (fs.existsSync(stagedSquint)) return root
     const squintCli = path.join(root, 'node_modules/squint-cljs/node_cli.js')
     if (fs.existsSync(squintCli)) return root
   }
