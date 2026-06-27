@@ -147,15 +147,17 @@ export class SessionKernel {
     replyPrefix: string,
     options?: { notifyDesktop?: boolean },
   ) {
-    const { type: _type, ...args } = message
+    const { type: _type, requestId, ...args } = message
+    const replyBase =
+      typeof requestId === 'string' ? { requestId } : {}
 
     try {
       const result = await this.invokeSyscall(op, args)
       if (options?.notifyDesktop) this.notifyDesktopUpdated()
-      post({ type: `${replyPrefix}:complete`, result })
+      post({ type: `${replyPrefix}:complete`, ...replyBase, result })
     } catch (err) {
       const errMessage = err instanceof Error ? err.message : 'Request failed'
-      post({ type: `${replyPrefix}:error`, message: errMessage })
+      post({ type: `${replyPrefix}:error`, ...replyBase, message: errMessage })
     }
   }
 

@@ -1,5 +1,5 @@
-import { Fragment, h, render } from 'preact'
-import { useCallback, useEffect, useState } from 'preact/hooks'
+import { h, render } from 'preact'
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import { toParent } from './kernel.js'
 
 function entryIcon(entry) {
@@ -35,6 +35,7 @@ function FileBrowserApp() {
   const [selected, setSelected] = useState(null)
   const [status, setStatus] = useState('')
   const [statusError, setStatusError] = useState(false)
+  const loadGeneration = useRef(0)
 
   const applyBrowse = useCallback((result) => {
     setCwd(result.directory_id)
@@ -46,24 +47,34 @@ function FileBrowserApp() {
   }, [])
 
   const loadDirectory = useCallback(async (directoryId) => {
+    const generation = ++loadGeneration.current
     setBusy(true)
     setStatus('Loading…')
     setStatusError(false)
     try {
       const payload = directoryId == null ? {} : { directoryId }
       const result = await toParent('fs:browse', payload)
+      if (generation !== loadGeneration.current) return
       applyBrowse(result)
       setStatus(`${result.entries.length} item${result.entries.length === 1 ? '' : 's'}`)
     } catch (err) {
+      if (generation !== loadGeneration.current) return
       setStatus(err instanceof Error ? err.message : 'Failed to load folder')
       setStatusError(true)
     } finally {
-      setBusy(false)
+      if (generation === loadGeneration.current) setBusy(false)
     }
   }, [applyBrowse])
 
   useEffect(() => {
-    void loadDirectory(null).finally(() => setInitialLoading(false))
+    let active = true
+    void loadDirectory(null).finally(() => {
+      if (active) setInitialLoading(false)
+    })
+    return () => {
+      active = false
+      loadGeneration.current += 1
+    }
   }, [loadDirectory])
 
   const hasSelection = selected != null
