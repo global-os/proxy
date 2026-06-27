@@ -27,6 +27,8 @@ import { getBuildVersion } from './build-version.js'
 import { benchmarkScrypt } from './crypto/password.js'
 import { checkAppTables, checkAuthTables, pingDatabase, pingPool, pool, probeDrizzleUserLookup, probeUserLookup } from './db/index.js'
 import { checkConfig, checkFrontendBundle, probeAuthHandler } from './health-checks.js'
+import { LaunchError } from './services/errors.js'
+import { deleteWorkspaceSession } from './services/session-access.js'
 
 const app = new Hono<Env>({
   getPath(request, options) {
@@ -292,6 +294,27 @@ app.post('/app/api/sessions', async (c) => {
     .where(eq(schema.sessions.user_id, user.id))
 
   return c.json(rows)
+})
+
+app.delete('/app/api/sessions/:sessionId', async (c) => {
+  const user = c.get('user')
+  if (!user) return c.json({ message: 'Unauthorized' }, 401)
+
+  const sessionId = Number.parseInt(c.req.param('sessionId'), 10)
+  if (!Number.isFinite(sessionId)) {
+    return c.json({ message: 'Invalid session id' }, 400)
+  }
+
+  try {
+    await deleteWorkspaceSession(user.id, sessionId)
+    return c.json({ ok: true })
+  } catch (err) {
+    if (err instanceof LaunchError) {
+      return c.json({ message: err.message }, err.status as 404)
+    }
+    console.error('[sessions] delete failed:', err)
+    return c.json({ message: 'Failed to delete session' }, 500)
+  }
 })
 
 const frontendDist = path.join(process.cwd(), 'src/frontend/dist')

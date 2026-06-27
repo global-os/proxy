@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useState } from 'react'
 import { VerticalFrame } from '../components/VerticalFrame'
 import { Page } from '../components/Page'
 import { PageTitle } from '../components/PageTitle'
-import { Button } from '@base-ui/react/button'
 import { signOut } from '../lib/auth-client'
 import { SessionList } from '../components/SessionList'
 
@@ -11,34 +11,27 @@ export const Route = createFileRoute('/sessions')({
 })
 
 function RouteComponent() {
-
   const navigate = useNavigate()
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  const handleLogOut = async () => {
+    setIsLoggingOut(true)
+    try {
+      await signOut()
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 500)
+      })
+      navigate({ to: '/' })
+    } finally {
+      setIsLoggingOut(false)
+    }
+  }
 
   return (
     <Page>
       <VerticalFrame width="65em">
-        <div>
-          <PageTitle>Sessions</PageTitle>
-        </div>
-        <div>
-          <SessionList />
-        </div>
-        <div>
-          <Button onClick={async () => {
-
-            await signOut() // TODO handle error here
-
-            // TODO for some reason we need to wait here, otherwise
-            // the session won't be clear when we reload
-            await new Promise<void>((res) => {
-              setTimeout(() => {
-                res()
-              }, 500)
-            })
-
-            navigate({ to: '/' })
-          }}>Log Out</Button>
-        </div>
+        <PageTitle>Sessions</PageTitle>
+        <SessionList onLogOut={handleLogOut} isLoggingOut={isLoggingOut} />
       </VerticalFrame>
     </Page>
   )
