@@ -16,7 +16,9 @@ if (fs.existsSync(distAssetsDir)) {
   fs.cpSync(distAssetsDir, publicAssetsDir, { recursive: true })
 }
 
-for (const file of ['index.html', 'vite.svg']) {
+// Do not copy index.html to public/ — it would be served for every hostname
+// (including *.app.onetrueos.com) and shadow instance iframes.
+for (const file of ['vite.svg']) {
   const source = path.join(distDir, file)
   if (fs.existsSync(source)) {
     fs.copyFileSync(source, path.join(publicDir, file))

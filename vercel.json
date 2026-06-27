@@ -6,7 +6,7 @@
   "functions": {
     "api/index.ts": {
       "maxDuration": 60,
-      "includeFiles": "src/frontend/dist/index.html,src/frontend/dist/assets/**,public/index.html,public/assets/**,src/landing.html,src/build-version.json,src/www/dist/rotating.js,certs/ca.pem"
+      "includeFiles": "src/frontend/dist/index.html,src/frontend/dist/assets/**,public/assets/**,src/landing.html,src/build-version.json,src/www/dist/rotating.js,certs/ca.pem"
     }
   },
   "headers": [
@@ -25,15 +25,6 @@
         {
           "key": "Content-Type",
           "value": "application/javascript; charset=utf-8"
-        }
-      ]
-    },
-    {
-      "source": "/index.html",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache"
         }
       ]
     }
