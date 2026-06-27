@@ -82,6 +82,16 @@ async function persistInstanceReady(instanceId: number): Promise<void> {
     .where(eq(schema.instances.id, instanceId))
 }
 
+export async function isInstanceDbReady(instanceId: number): Promise<boolean> {
+  const [row] = await db
+    .select({ state: schema.instances.state })
+    .from(schema.instances)
+    .where(eq(schema.instances.id, instanceId))
+    .limit(1)
+
+  return row?.state === 'running'
+}
+
 /** Ensure instance bundle is extracted and ready to serve. */
 export async function ensureInstanceReady(instanceId: number): Promise<boolean> {
   const [row] = await db

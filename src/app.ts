@@ -17,8 +17,10 @@ import { auth } from './auth.js'
 import authRoutes from './routes/auth.js'
 import fsRoutes from './routes/fs.js'
 import programsRoutes from './routes/programs.js'
+import { scheduleInstancePrepare } from './runtime/instance-background.js'
 import { ensureInstanceReady, touchInstance } from './runtime/instance-manager.js'
-import { INSTANCE_MIME, resolveCachedInstanceFile } from './runtime/instance-content.js'
+import { INSTANCE_MIME, isInstanceContentCached, resolveCachedInstanceFile } from './runtime/instance-content.js'
+import { instanceStartingPage } from './runtime/instance-starting-page.js'
 import { instanceSlugFromHostname, stripInstancePrefix } from './runtime/instance-proxy.js'
 import { resolveInstanceIdBySlug } from './runtime/instance-resolve.js'
 import { getBuildVersion } from './build-version.js'
@@ -336,6 +338,28 @@ app.all('/instance/*', async (c) => {
     return c.json({ message: 'Invalid instance' }, 400)
   }
 
+  const upstreamPath = stripInstancePrefix(url.pathname, slug)
+
+  if (!isInstanceContentCached(instanceId)) {
+    if (upstreamPath === '/__status') {
+      const ready = await ensureInstanceReady(instanceId)
+      return c.json({ ready })
+    }
+
+    scheduleInstancePrepare(instanceId)
+
+    const wantsHtml =
+      upstreamPath === '/' ||
+      upstreamPath === '/index.html' ||
+      upstreamPath.endsWith('/')
+
+    if (wantsHtml) {
+      return c.html(instanceStartingPage())
+    }
+
+    return c.json({ message: 'Instance starting' }, 503, { 'Retry-After': '2' })
+  }
+
   const ready = await ensureInstanceReady(instanceId)
   if (!ready) {
     return c.json({ message: 'Instance not available' }, 502)
@@ -343,7 +367,6 @@ app.all('/instance/*', async (c) => {
 
   void touchInstance(instanceId).catch(() => {})
 
-  const upstreamPath = stripInstancePrefix(url.pathname, slug)
   const filePath = resolveCachedInstanceFile(instanceId, upstreamPath)
   if (!filePath) {
     return c.notFound()
