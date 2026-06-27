@@ -14,10 +14,21 @@ async function writeRuntime(out) {
   })
 }
 
+async function ensureDir(dir) {
+  await fs.mkdir(dir, { recursive: true })
+}
+
 const targets = [
   path.join(root, 'src/gapp/registry/squint'),
   path.join(root, 'dist/src/gapp/registry/squint'),
 ]
+
+for (const out of [
+  path.join(root, 'src/gapp/registry/deps'),
+  path.join(root, 'dist/src/gapp/registry/deps'),
+]) {
+  await ensureDir(out)
+}
 
 for (const out of targets) {
   await writeRuntime(out)

@@ -3,7 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const out = path.join(root, 'src/gapp/registry/rxjs.js')
+const out = path.join(root, 'src/gapp/registry/deps/rxjs.js')
 
 execFileSync(
   'npx',
