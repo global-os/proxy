@@ -1,6 +1,7 @@
 import { h, render } from 'preact'
-import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
+import { useCallback, useEffect, useState } from 'preact/hooks'
 import { toParent } from './kernel.js'
+import { useRetryTask } from './use-retry-task.js'
 
 function entryIcon(entry) {
   if (entry.type === 'directory') {
@@ -34,7 +35,7 @@ function FileBrowserApp() {
   const [selected, setSelected] = useState(null)
   const [status, setStatus] = useState('Loading…')
   const [statusError, setStatusError] = useState(false)
-  const loadGeneration = useRef(0)
+  const { run: runRetry, cancel: cancelRetry } = useRetryTask()
 
   const applyBrowse = useCallback((result) => {
     setCwd(result.directory_id)
@@ -46,44 +47,34 @@ function FileBrowserApp() {
   }, [])
 
   const loadDirectory = useCallback(async (directoryId) => {
-    const generation = ++loadGeneration.current
     setBusy(true)
     setStatusError(false)
 
-    try {
-      for (let attempt = 0; attempt <= 4; attempt += 1) {
-        if (generation !== loadGeneration.current) return
+    await runRetry({
+      task: async () => {
+        const payload = directoryId == null ? {} : { directoryId }
+        return toParent('fs:browse', payload)
+      },
+      onAttempt: (attempt) => {
         setStatus(attempt > 0 ? 'Retrying…' : 'Loading…')
-
-        try {
-          const payload = directoryId == null ? {} : { directoryId }
-          const result = await toParent('fs:browse', payload)
-          if (generation !== loadGeneration.current) return
-          applyBrowse(result)
-          setStatus(`${result.entries.length} item${result.entries.length === 1 ? '' : 's'}`)
-          return
-        } catch (err) {
-          if (generation !== loadGeneration.current) return
-          if (attempt < 4) {
-            await new Promise((resolve) => window.setTimeout(resolve, 200 * (attempt + 1)))
-            continue
-          }
-          setStatus(err instanceof Error ? err.message : 'Failed to load folder')
-          setStatusError(true)
-        }
-      }
-    } finally {
-      if (generation === loadGeneration.current) setBusy(false)
-    }
-  }, [applyBrowse])
+      },
+      onSuccess: (result) => {
+        applyBrowse(result)
+        setStatus(`${result.entries.length} item${result.entries.length === 1 ? '' : 's'}`)
+      },
+      onFailure: (err) => {
+        setStatus(err instanceof Error ? err.message : 'Failed to load folder')
+        setStatusError(true)
+      },
+      onFinally: () => setBusy(false),
+    })
+  }, [applyBrowse, runRetry])
 
   useEffect(() => {
     void loadDirectory(null)
-    return () => {
-      loadGeneration.current += 1
-    }
-    // Mount once; generation bump cancels stale browse on Strict Mode remount.
-  }, [loadDirectory])
+    return cancelRetry
+    // cancelRetry bumps generation so Strict Mode remount drops stale browse.
+  }, [loadDirectory, cancelRetry])
 
   const hasSelection = selected != null
 
