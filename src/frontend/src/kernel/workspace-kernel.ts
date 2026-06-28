@@ -323,6 +323,7 @@ export class WorkspaceKernel {
   ) {
     if (this.activeOps.get(binding.processId)?.op === 'save') {
       console.warn(`[kernel] save already in progress for process ${binding.processId}`)
+      post({ type: 'save:error', message: 'Save already in progress' })
       return
     }
 

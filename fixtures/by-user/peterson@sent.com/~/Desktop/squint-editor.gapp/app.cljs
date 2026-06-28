@@ -4,9 +4,9 @@
 ;;
 ;; Sustainable practices:
 ;; - Yjs Y.Text holds canonical document bytes; the textarea mirrors it (observe + input).
-;; - RxJS pipes kernel postMessage traffic; no raw addEventListener for app protocol.
+;; - Kernel replies via window "message" (same pattern as helloworld.gapp).
 ;; - Kernel only: ready, init/init:fresh, save — never fetch /api from the iframe.
-;; - Platform deps are vendored IIFE files (yjs.js, rxjs.js) declared in gapp.json.
+;; - Platform deps are vendored IIFE files (yjs.js) declared in gapp.json.
 (def SAVE_TIMEOUT_MS 15000)
 
 (def state (atom {:saving false}))
@@ -119,18 +119,18 @@
                    (status! (.-message msg) true))
     nil))
 
-(def messages$
-  (-> (js/rxjs.fromEvent js/window "message")
-      (.pipe (js/rxjs.map #(.-data %)))
-      (.pipe (js/rxjs.filter #(.-type %)))))
+(defn on-kernel-message! [event]
+  (let [msg (.-data event)]
+    (when (and (object? msg) (.-type msg))
+      (handle-msg msg))))
 
 (.observe ytext sync-editor!)
 (.addEventListener $editor "input" on-input!)
 (.addEventListener $save "click" #(save!))
+(.addEventListener js/window "message" on-kernel-message!)
 (.addEventListener js/document "keydown"
   (fn [e]
     (when (and (or (.-metaKey e) (.-ctrlKey e)) (= "s" (.-key e)))
       (.preventDefault e)
       (save!))))
-(.subscribe messages$ handle-msg)
 (post! #js {:type "ready"})

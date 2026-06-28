@@ -1,7 +1,7 @@
 {
   "name": "squint-editor",
   "icon": "wizard",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "entry": "index.html",
   "type": "module",
   "compile": {
@@ -9,8 +9,7 @@
       "source": "app.cljs",
       "output": "app.js",
       "externals": {
-        "yjs": "Y",
-        "rxjs": "rxjs"
+        "yjs": "Y"
       }
     }
   },
@@ -22,14 +21,6 @@
       "format": "iife",
       "global": "Y",
       "order": 1
-    },
-    "rxjs": {
-      "version": "7.8.1",
-      "source": "bundled",
-      "path": "rxjs.js",
-      "format": "iife",
-      "global": "rxjs",
-      "order": 2
     }
   }
 }

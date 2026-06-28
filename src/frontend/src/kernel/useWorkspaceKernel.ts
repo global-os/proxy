@@ -6,6 +6,7 @@ export function useWorkspaceKernel(workspaceId: string) {
   const kernel = useMemo(() => new WorkspaceKernel(workspaceId), [workspaceId])
   const bindingsRef = useRef(new Map<number, KernelWindowBinding>())
   const windowsRef = useRef(new Map<number, AppWindow>())
+  const pendingIframesRef = useRef(new Map<number, HTMLIFrameElement>())
   const iframeRefFns = useRef(new Map<number, (el: HTMLIFrameElement | null) => void>())
 
   useEffect(() => {
@@ -24,8 +25,11 @@ export function useWorkspaceKernel(workspaceId: string) {
     if (!iframe) {
       bindingsRef.current.delete(win.id)
       kernel.unregister(win.id)
+      pendingIframesRef.current.delete(win.id)
       return
     }
+
+    pendingIframesRef.current.delete(win.id)
 
     const binding: KernelWindowBinding = {
       workspaceId,
@@ -49,8 +53,12 @@ export function useWorkspaceKernel(workspaceId: string) {
       binding.bundleName = win.bundleName ?? `${win.title}.gapp`
       binding.processId = win.processId ?? binding.processId
       binding.instanceId = win.instanceId ?? binding.instanceId
+      return
     }
-  }, [])
+
+    const pending = pendingIframesRef.current.get(win.id)
+    if (pending) bindWindow(win, pending)
+  }, [bindWindow])
 
   const releaseWindow = useCallback((windowId: number) => {
     const win = windowsRef.current.get(windowId)
@@ -64,7 +72,11 @@ export function useWorkspaceKernel(workspaceId: string) {
     if (!fn) {
       fn = (el: HTMLIFrameElement | null) => {
         const win = windowsRef.current.get(windowId)
-        if (!win) return
+        if (!win) {
+          if (el) pendingIframesRef.current.set(windowId, el)
+          else pendingIframesRef.current.delete(windowId)
+          return
+        }
         bindWindow(win, el)
       }
       iframeRefFns.current.set(windowId, fn)
