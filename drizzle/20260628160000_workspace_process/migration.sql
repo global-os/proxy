@@ -67,8 +67,9 @@ ALTER TABLE "workspace_window" ADD COLUMN IF NOT EXISTS "process_id" integer REF
 UPDATE "workspace_window" ww
 SET "process_id" = p."id"
 FROM "task" t
-JOIN "process" p ON p."workspace_id" = ww."workspace_id" AND p."directory_id" = t."directory_id"
+JOIN "process" p ON p."directory_id" = t."directory_id"
 WHERE t."id" = ww."task_id"
+  AND p."workspace_id" = ww."workspace_id"
   AND ww."process_id" IS NULL;
 
 ALTER TABLE "workspace_window" DROP CONSTRAINT IF EXISTS "workspace_window_task_id_task_id_fk";

@@ -1,6 +1,7 @@
 {
   "exclude": [
       "src/frontend",
+      "src/www",
       "**/*.test.ts"
   ],
   "compilerOptions": {
