@@ -238,3 +238,15 @@ export const workspaceLog = pgTable('workspace_log', {
 }, (table) => [
   index('workspace_log_workspace_id_idx').on(table.workspace_id),
 ])
+
+/** Append-only workspace events streamed to connected desk clients (SSE). */
+export const workspaceEvent = pgTable('workspace_event', {
+  id: serial('id').primaryKey(),
+  workspace_id: integer('workspace_id').notNull().references(() => workspace.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(),
+  payload: text('payload').notNull(),
+  created_at: timestamp('created_at').defaultNow().notNull(),
+}, (table) => [
+  index('workspace_event_workspace_id_idx').on(table.workspace_id),
+  index('workspace_event_workspace_id_id_idx').on(table.workspace_id, table.id),
+])

@@ -7,6 +7,7 @@ import { WorkspaceWindow } from './WorkspaceWindow'
 import { useWorkspaceKernel } from '../../kernel/useWorkspaceKernel'
 import { WorkspaceLogger } from '../WorkspaceLogger'
 import { Taskbar, TASKBAR_HEIGHT, type FileIndexEntry } from './Taskbar'
+import { useWorkspaceEvents } from '../../hooks/useWorkspaceEvents'
 import {
   iconsService,
   installIconsConsoleApi,
@@ -195,6 +196,16 @@ export function Workspace({ workspaceId, children }: WorkspaceProps) {
   })
   const desktopItems = desktopData?.items ?? []
   const { syncWindow, iframeRef, releaseWindow } = useWorkspaceKernel(workspaceId)
+
+  useWorkspaceEvents(workspaceId, {
+    onProcessKilled: (event) => {
+      for (const windowId of event.windowIds) {
+        releaseWindow(windowId)
+      }
+      actions.closeProcessWindows(event.processId)
+      void queryClient.invalidateQueries({ queryKey: ['workspace-windows', workspaceId] })
+    },
+  })
 
   const hydratedWorkspace = useRef<string | null>(null)
 

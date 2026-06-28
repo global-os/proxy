@@ -3,6 +3,8 @@ import * as middleware from '../middleware.js'
 import { LaunchError, launchProgram } from '../services/launch-program.js'
 import { requireWorkspace } from '../services/workspace-access.js'
 import { clearWorkspaceLogs, listWorkspaceLogs } from '../services/workspace-logger.js'
+import { db } from '../db/index.js'
+import { createWorkspaceEventStream } from '../events/sse.js'
 import { killWorkspaceProcess, listWorkspaceProcesses } from '../services/process-service.js'
 import { deleteWindow, listWorkspaceWindows } from '../services/window-service.js'
 import { Env } from '../types.js'
@@ -58,6 +60,40 @@ router.delete('/workspaces/:workspaceId/logs', async (c) => {
     console.error('[workspace-logs]', err)
     return c.json({ message: 'Failed to clear workspace logs' }, 500)
   }
+})
+
+router.get('/workspaces/:workspaceId/events', async (c) => {
+  const user = c.get('user')
+  if (!user) return c.json({ message: 'Unauthorized' }, 401)
+
+  const workspaceId = Number.parseInt(c.req.param('workspaceId'), 10)
+  if (!Number.isFinite(workspaceId)) {
+    return c.json({ message: 'Invalid workspace id' }, 400)
+  }
+
+  try {
+    await requireWorkspace(user.id, workspaceId)
+  } catch (err) {
+    if (err instanceof LaunchError) {
+      return c.json({ message: err.message }, err.status as 404)
+    }
+    throw err
+  }
+
+  const afterRaw = c.req.query('after') ?? c.req.header('Last-Event-ID') ?? '0'
+  const afterId = Number.parseInt(afterRaw, 10)
+  const cursor = Number.isFinite(afterId) && afterId >= 0 ? afterId : 0
+
+  const signal = c.req.raw.signal
+  const stream = createWorkspaceEventStream(db, workspaceId, cursor, signal)
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+    },
+  })
 })
 
 router.get('/workspaces/:workspaceId/processes', async (c) => {

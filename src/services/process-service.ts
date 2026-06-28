@@ -1,6 +1,7 @@
 import { and, eq, inArray } from 'drizzle-orm'
 import { db } from '../db/index.js'
 import * as schema from '../db/schema.js'
+import { appendWorkspaceEvent } from '../events/store.js'
 import { LaunchError } from './errors.js'
 import { requireWorkspace } from './workspace-access.js'
 
@@ -92,8 +93,12 @@ export async function killWorkspaceProcess(
   await requireWorkspace(userId, workspaceId)
 
   const [proc] = await db
-    .select({ id: schema.process.id })
+    .select({
+      id: schema.process.id,
+      bundleName: schema.directory.name,
+    })
     .from(schema.process)
+    .innerJoin(schema.directory, eq(schema.process.directory_id, schema.directory.id))
     .where(and(
       eq(schema.process.id, processId),
       eq(schema.process.workspace_id, workspaceId),
@@ -104,7 +109,20 @@ export async function killWorkspaceProcess(
     throw new LaunchError('Process not found', 404)
   }
 
+  const windows = await db
+    .select({ id: schema.workspaceWindow.id })
+    .from(schema.workspaceWindow)
+    .where(eq(schema.workspaceWindow.process_id, processId))
+
   await db
     .delete(schema.process)
     .where(eq(schema.process.id, processId))
+
+  await appendWorkspaceEvent(db, {
+    type: 'process.killed',
+    workspaceId,
+    processId,
+    windowIds: windows.map((row) => row.id),
+    bundleName: proc.bundleName,
+  })
 }
