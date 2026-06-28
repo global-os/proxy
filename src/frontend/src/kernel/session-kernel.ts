@@ -9,12 +9,25 @@ function isKernelMessage(data: unknown): data is KernelMessage {
   return typeof data === 'object' && data !== null && typeof (data as KernelMessage).type === 'string'
 }
 
+type TraceEvent = {
+  type: 'trace:event'
+  at: number
+  direction: 'in' | 'out'
+  windowId: number
+  processId: number
+  bundleName: string
+  title: string
+  message: KernelMessage
+}
+
 export class SessionKernel {
   private readonly bindings = new Map<number, KernelWindowBinding>()
   /** Per-process opaque state (schema owned by the app). */
   private readonly processState = new Map<number, Record<string, unknown>>()
   /** In-flight operation per process (e.g. which window is saving). */
   private readonly activeOps = new Map<number, ActiveOperation>()
+  /** Windows subscribed to session-wide kernel trace events. */
+  private readonly tracers = new Set<number>()
 
   constructor(private readonly sessionId: string) {}
 
@@ -34,15 +47,43 @@ export class SessionKernel {
     if (active?.windowId === windowId) {
       this.activeOps.delete(binding.processId)
     }
+    this.tracers.delete(windowId)
     this.bindings.delete(windowId)
+  }
+
+  private emitTrace(
+    binding: KernelWindowBinding,
+    direction: TraceEvent['direction'],
+    message: KernelMessage,
+  ) {
+    if (this.tracers.size === 0) return
+
+    const payload: TraceEvent = {
+      type: 'trace:event',
+      at: Date.now(),
+      direction,
+      windowId: binding.windowId,
+      processId: binding.processId,
+      bundleName: binding.bundleName,
+      title: binding.title,
+      message,
+    }
+
+    for (const windowId of this.tracers) {
+      const tracer = this.bindings.get(windowId)
+      tracer?.iframe.contentWindow?.postMessage(payload, '*')
+    }
   }
 
   handleMessage(event: MessageEvent) {
     const binding = this.findBinding(event.source)
     if (!binding || !isKernelMessage(event.data)) return
 
+    this.emitTrace(binding, 'in', event.data)
+
     const post = (msg: KernelMessage) => {
       binding.iframe.contentWindow?.postMessage(msg, '*')
+      this.emitTrace(binding, 'out', msg)
     }
 
     switch (event.data.type) {
@@ -68,6 +109,14 @@ export class SessionKernel {
         void this.onFsOp('fs.delete', event.data, post, 'fs:delete', { notifyDesktop: true })
         break
       case 'die:response':
+        break
+      case 'trace:subscribe':
+        this.tracers.add(binding.windowId)
+        post({ type: 'trace:subscribed' })
+        break
+      case 'trace:unsubscribe':
+        this.tracers.delete(binding.windowId)
+        post({ type: 'trace:unsubscribed' })
         break
     }
   }

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kernel Tracer</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body, #root {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+    color: #e8e8ec;
+    background: #1a1a22;
+  }
+
+  .shell {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 6px;
+    gap: 6px;
+  }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+  }
+
+  button, .filter {
+    font: inherit;
+    padding: 4px 8px;
+    border: 1px solid #3a3a48;
+    background: #242430;
+    color: #e8e8ec;
+    cursor: default;
+  }
+
+  button:disabled {
+    opacity: 0.45;
+  }
+
+  button:not(:disabled):hover {
+    background: #2f2f3d;
+  }
+
+  .filter {
+    flex: 1 1 180px;
+    min-width: 120px;
+  }
+
+  .panel {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #3a3a48;
+    background: #121218;
+    overflow: hidden;
+  }
+
+  .list-head, .event-row {
+    display: grid;
+    grid-template-columns: 72px 28px 1fr 120px;
+    gap: 8px;
+    align-items: start;
+    padding: 4px 8px;
+  }
+
+  .list-head {
+    flex: 0 0 auto;
+    background: #242430;
+    border-bottom: 1px solid #3a3a48;
+    color: #a8a8b8;
+    font-weight: 700;
+  }
+
+  .list-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .event-row {
+    border-bottom: 1px solid #22222c;
+    cursor: default;
+  }
+
+  .event-row:hover {
+    background: #1d1d28;
+  }
+
+  .event-row.selected {
+    background: #2a2540;
+  }
+
+  .dir-in { color: #6ee7b7; }
+  .dir-out { color: #93c5fd; }
+
+  .type {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #f3f4f6;
+  }
+
+  .source {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #9ca3af;
+  }
+
+  .detail {
+    flex: 0 0 38%;
+    min-height: 120px;
+    border: 1px solid #3a3a48;
+    background: #0f0f14;
+    overflow: auto;
+    padding: 8px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #d1d5db;
+  }
+
+  .statusbar {
+    flex: 0 0 auto;
+    padding: 4px 6px;
+    border: 1px solid #3a3a48;
+    background: #242430;
+    color: #a8a8b8;
+  }
+
+  .statusbar.error { color: #fca5a5; }
+
+  .empty {
+    padding: 24px;
+    text-align: center;
+    color: #6b7280;
+  }
+
+  .pill {
+    display: inline-block;
+    padding: 1px 6px;
+    border: 1px solid #3a3a48;
+    border-radius: 999px;
+    font-size: 10px;
+    color: #c4b5fd;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="importmap">
+{
+  "imports": {
+    "preact": "./preact.mjs",
+    "preact/hooks": "./hooks.mjs"
+  }
+}
+</script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
