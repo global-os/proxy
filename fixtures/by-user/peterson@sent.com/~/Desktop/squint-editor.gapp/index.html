@@ -6,145 +6,66 @@
 <title>Squint Editor</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  html, body {
-    height: 100%;
-    overflow: hidden;
-  }
-
+  html, body { height: 100%; overflow: hidden; }
   body {
     font-family: system-ui, sans-serif;
     background: #fff;
     color: #111;
     display: flex;
     flex-direction: column;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    body { background: #1a1a1a; color: #eee; }
-    textarea { background: #111; color: #eee; border-color: #333; }
-    button { background: #222; color: #eee; border-color: #444; }
-    button:hover:not(:disabled) { background: #333; }
-    .banner { background: #3a2e00; color: #fcd34d; border-color: #78580a; }
-    .filename-label { color: #999; }
-  }
-
-  #shell {
-    display: flex;
-    flex: 1;
-    min-height: 0;
-    flex-direction: column;
-    gap: 0.5rem;
     padding: 0.75rem;
+    gap: 0.5rem;
   }
-
   .toolbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    flex: 0 0 auto;
   }
-
-  .filename-wrap {
-    display: flex;
-    flex-direction: column;
-    gap: 0.1rem;
-    min-width: 0;
-  }
-
-  .filename-label {
-    font-size: 0.72rem;
-    color: #888;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  .filename {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: #333;
+  #filename {
+    font-family: monospace;
+    font-size: 13px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-
   button {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
     padding: 6px 14px;
     font-size: 13px;
     border: 1px solid #ccc;
     border-radius: 6px;
     background: #fff;
     cursor: pointer;
-    transition: opacity 0.15s;
-    flex: 0 0 auto;
   }
-
   button:hover:not(:disabled) { background: #f5f5f5; }
   button:disabled { opacity: 0.45; cursor: not-allowed; }
-
   textarea {
-    flex: 1 1 auto;
+    flex: 1;
     min-height: 0;
     width: 100%;
     resize: none;
     font-family: monospace;
     font-size: 13px;
-    line-height: 1.6;
-    padding: 12px;
+    line-height: 1.5;
+    padding: 10px;
     border: 1px solid #ddd;
     border-radius: 6px;
     outline: none;
   }
-
   textarea:focus { border-color: #888; }
-
-  .statusbar {
-    flex: 0 0 auto;
-    min-height: 1.2em;
-    font-size: 12px;
-    color: #888;
-  }
-
-  .statusbar.error { color: #b91c1c; }
-
-  .banner {
-    flex: 0 0 auto;
-    padding: 8px 12px;
-    font-size: 13px;
-    background: #fefce8;
-    color: #854d0e;
-    border: 1px solid #fde68a;
-    border-radius: 6px;
-  }
-
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .spin { animation: spin 1s linear infinite; display: inline-block; }
+  #statusbar { font-size: 12px; color: #888; min-height: 1.2em; }
+  #statusbar.error { color: #b91c1c; }
 </style>
 </head>
 <body>
-
-<div id="shell">
-  <div id="banner" class="banner" style="display:none"></div>
   <div class="toolbar">
-    <div class="filename-wrap">
-      <span class="filename-label">Desktop file</span>
-      <span class="filename" id="filename">Untitled.txt</span>
-    </div>
-    <button id="save-btn" type="button">
-      <span id="save-icon">💾</span>
-      <span id="save-label">Save</span>
-    </button>
+    <span id="filename">Untitled.txt</span>
+    <button id="save-btn" type="button">Save</button>
   </div>
   <textarea id="editor" spellcheck="false"></textarea>
-  <div class="statusbar" id="statusbar"></div>
-</div>
-
-<script src="yjs.js"></script>
-<script src="rxjs.js"></script>
-<script type="module" src="app.js"></script>
+  <div id="statusbar"></div>
+  <script src="yjs.js"></script>
+  <script src="rxjs.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
