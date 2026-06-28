@@ -48,7 +48,7 @@ const Chrome = createComponent(
     top,
     left,
     borderRadius: 0,
-    overflow: 'hidden',
+    overflow: 'visible',
     background: '#c0c0c0',
     padding: '3px',
     boxSizing: 'border-box',
@@ -184,11 +184,11 @@ const ChromeButton = createComponent(
 )
 
 const ContentFrame = createComponent(() => ({
-  position: 'relative',
   flex: '1 1 auto',
   minHeight: 0,
   display: 'flex',
   flexDirection: 'column',
+  overflow: 'hidden',
   background: '#c0c0c0',
   padding: '2px',
   ...insetBorder,
@@ -304,21 +304,21 @@ export function WorkspaceWindow({
           src={win.src}
           innerRef={onIframeRef}
         />
-        <ResizeHandle
-          cursor="nesw-resize"
-          side="left"
-          data-window-index={windowIndex}
-          data-resize-handle="bottom-left"
-          onMouseDown={onMouseDown}
-        />
-        <ResizeHandle
-          cursor="nwse-resize"
-          side="right"
-          data-window-index={windowIndex}
-          data-resize-handle="bottom-right"
-          onMouseDown={onMouseDown}
-        />
       </ContentFrame>
+      <ResizeHandle
+        cursor="nesw-resize"
+        side="left"
+        data-window-index={windowIndex}
+        data-resize-handle="bottom-left"
+        onMouseDown={onMouseDown}
+      />
+      <ResizeHandle
+        cursor="nwse-resize"
+        side="right"
+        data-window-index={windowIndex}
+        data-resize-handle="bottom-right"
+        onMouseDown={onMouseDown}
+      />
     </Chrome>
   )
 }
