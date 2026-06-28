@@ -169,5 +169,12 @@
 }
 </script>
 <script type="module" src="app.js"></script>
+<script>
+window.addEventListener('error', (event) => {
+  const root = document.getElementById('root')
+  if (!root || root.childNodes.length > 0) return
+  root.textContent = event.message || 'Failed to load kernel tracer'
+})
+</script>
 </body>
 </html>
