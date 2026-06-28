@@ -1,8 +1,8 @@
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { db } from '../db/index.js'
 import * as schema from '../db/schema.js'
-import { instancePublicUrl } from '../runtime/constants.js'
-import { isLegacyUuidSlug } from '../runtime/instance-slug.js'
+import { isLegacyUuidSlug } from '../runtime/instance/slug.js'
+import { instancePublicUrl } from '../runtime/urls.js'
 import { upgradeLegacySlug } from './create-instance.js'
 
 export type WorkspaceWindowDto = {

@@ -3,7 +3,7 @@ import { serve } from '@hono/node-server'
 import { testConnection } from './db/index.js'
 import { seedUserFixtures } from './db/seed.js'
 import app from './app.js'
-import { startRuntimeMaintenance } from './runtime/instance-manager.js'
+import { startRuntimeMaintenance } from './runtime/instance/manager.js'
 
 async function main() {
   await testConnection()

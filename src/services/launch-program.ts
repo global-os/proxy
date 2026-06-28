@@ -1,6 +1,6 @@
 import { ensurePrimaryInstance } from './create-instance.js'
 import { requireLaunchableApp, requireWorkspace } from './workspace-access.js'
-import { scheduleInstancePrepare } from '../runtime/instance-background.js'
+import { scheduleInstancePrepare } from '../runtime/instance/background.js'
 import { createWorkspaceLogWriter } from './workspace-logger.js'
 import { findOrCreateProcess } from './process.js'
 import {

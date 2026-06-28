@@ -21,13 +21,15 @@ import syscallsRoutes from './routes/syscalls.js'
 import programsRoutes from './routes/programs.js'
 import adminRoutes from './routes/admin.js'
 import { ensureGlobalPcForUser } from './services/global-pc.js'
-import { scheduleInstancePrepare } from './runtime/instance-background.js'
-import { ensureInstanceReady, touchInstance } from './runtime/instance-manager.js'
-import { INSTANCE_MIME, isInstanceContentCached, resolveCachedInstanceFile } from './runtime/instance-content.js'
-import { instanceLoadingPage } from './runtime/instance-loading-page.js'
-import { getInstancePrepareStatus } from './runtime/instance-prepare-progress.js'
-import { instanceSlugFromHostname, stripInstancePrefix } from './runtime/instance-proxy.js'
-import { resolveInstanceIdBySlug } from './runtime/instance-resolve.js'
+import { isBundleCached } from './runtime/cache/store.js'
+import { resolveInstanceBundleFile } from './runtime/cache/serve.js'
+import { scheduleInstancePrepare } from './runtime/instance/background.js'
+import { ensureInstanceReady, touchInstance } from './runtime/instance/manager.js'
+import { instanceLoadingPage } from './runtime/instance/loading-page.js'
+import { getInstancePrepareStatus } from './runtime/instance/prepare-progress.js'
+import { resolveInstanceIdBySlug } from './runtime/instance/resolve.js'
+import { INSTANCE_MIME } from './runtime/tar/mime.js'
+import { instanceSlugFromHostname, stripInstancePrefix } from './runtime/urls.js'
 import { getBuildVersion } from './build-version.js'
 import { frontendDistRoot, readFrontendFile, resolveFrontendFile } from './frontend-paths.js'
 import { resolveStorybookFile } from './storybook-paths.js'
@@ -407,7 +409,7 @@ app.all('/instance/*', async (c) => {
 
   if (upstreamPath === '/_status') {
     scheduleInstancePrepare(instanceId)
-    const cached = await isInstanceContentCached(instanceId)
+    const cached = await isBundleCached(instanceId)
     return c.json(getInstancePrepareStatus(instanceId, cached))
   }
 
@@ -418,7 +420,7 @@ app.all('/instance/*', async (c) => {
 
   scheduleInstancePrepare(instanceId)
 
-  const cached = await isInstanceContentCached(instanceId)
+  const cached = await isBundleCached(instanceId)
   if (!cached && wantsHtml) {
     return c.html(instanceLoadingPage())
   }
@@ -431,7 +433,7 @@ app.all('/instance/*', async (c) => {
 
   void touchInstance(instanceId).catch(() => {})
 
-  const file = await resolveCachedInstanceFile(instanceId, upstreamPath)
+  const file = await resolveInstanceBundleFile(instanceId, upstreamPath)
   if (!file) {
     return c.notFound()
   }

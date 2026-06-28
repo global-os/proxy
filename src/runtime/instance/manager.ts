@@ -1,23 +1,23 @@
 import { eq } from 'drizzle-orm'
-import { getOrCreateImage } from '../db/image.js'
-import { createWorkspaceLogWriter } from '../services/workspace-logger.js'
-import { resolveWorkspaceIdForInstance } from '../services/resolve-workspace-for-instance.js'
-import { db } from '../db/index.js'
-import * as schema from '../db/schema.js'
-import { PENDING_INSTANCE_CHECKSUM } from './instance-constants.js'
+import { getOrCreateImage } from '../../db/image.js'
+import { createWorkspaceLogWriter } from '../../services/workspace-logger.js'
+import { resolveWorkspaceIdForInstance } from '../../services/resolve-workspace-for-instance.js'
+import { db } from '../../db/index.js'
+import * as schema from '../../db/schema.js'
+import { CLEANUP_INTERVAL_MS } from '../cache/constants.js'
+import { runBundleCacheEviction } from '../cache/lru.js'
+import { ensureInstanceBundleCached } from '../cache/populate.js'
 import {
-  ensureInstanceContent,
-  evictInstanceContent,
-  isInstanceContentCached,
-  runInstanceBundleCacheEviction,
-  touchInstanceBundleCache,
-} from './instance-content.js'
-import { CLEANUP_INTERVAL_MS } from './constants.js'
+  evictBundleCache,
+  isBundleCached,
+  touchBundleCache,
+} from '../cache/store.js'
+import { PENDING_INSTANCE_CHECKSUM } from './constants.js'
 import {
   setInstancePrepareFailed,
   setInstancePrepareProgress,
   setInstancePrepareReady,
-} from './instance-prepare-progress.js'
+} from './prepare-progress.js'
 
 const preparing = new Map<number, Promise<boolean>>()
 
@@ -27,8 +27,8 @@ export async function touchInstance(instanceId: number): Promise<void> {
     .set({ last_used_at: new Date() })
     .where(eq(schema.instances.id, instanceId))
 
-  if (await isInstanceContentCached(instanceId)) {
-    await touchInstanceBundleCache(instanceId)
+  if (await isBundleCached(instanceId)) {
+    await touchBundleCache(instanceId)
   }
 }
 
@@ -38,16 +38,16 @@ export async function startInstanceRuntime(
   tarBytes: Buffer,
 ): Promise<void> {
   await touchInstance(instanceId)
-  await ensureInstanceContent(instanceId, tarBytes, checksum)
+  await ensureInstanceBundleCached(instanceId, tarBytes, checksum)
 }
 
 let cleanupTimer: NodeJS.Timeout | undefined
 
 export function startRuntimeMaintenance(): void {
   if (cleanupTimer) return
-  void runInstanceBundleCacheEviction()
+  void runBundleCacheEviction()
   cleanupTimer = setInterval(() => {
-    void runInstanceBundleCacheEviction().catch((err) => {
+    void runBundleCacheEviction().catch((err) => {
       console.error('[runtime] cache eviction failed:', err)
     })
   }, CLEANUP_INTERVAL_MS)
@@ -94,7 +94,7 @@ async function loadInstanceReady(instanceId: number): Promise<boolean> {
     return false
   }
 
-  if (await isInstanceContentCached(instanceId, row.directory_checksum)) {
+  if (await isBundleCached(instanceId, row.directory_checksum)) {
     await touchInstance(instanceId)
     if (row.state !== 'running') {
       await persistInstanceReady(instanceId)
@@ -103,8 +103,8 @@ async function loadInstanceReady(instanceId: number): Promise<boolean> {
     return true
   }
 
-  if (await isInstanceContentCached(instanceId)) {
-    await evictInstanceContent(instanceId)
+  if (await isBundleCached(instanceId)) {
+    await evictBundleCache(instanceId)
   }
 
   let imageId = row.image_id

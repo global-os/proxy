@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
-import { ensureInstanceReady } from './instance-manager.js'
+import { ensureInstanceReady } from './manager.js'
 
 type VercelRequestContext = {
   waitUntil?: (promise: Promise<unknown>) => void
