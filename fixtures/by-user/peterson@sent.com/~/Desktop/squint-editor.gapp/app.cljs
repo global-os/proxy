@@ -4,7 +4,7 @@
 ;;
 ;; Sustainable practices:
 ;; - Yjs Y.Text holds canonical document bytes; the textarea mirrors it (observe + input).
-;; - Kernel replies via window "message" (same pattern as helloworld.gapp).
+;; - Kernel replies via window "message" (same pattern as textedit.gapp).
 ;; - Kernel only: ready, init/init:fresh, save — never fetch /api from the iframe.
 ;; - Platform deps are vendored IIFE files (yjs.js) declared in gapp.json.
 (def SAVE_TIMEOUT_MS 15000)

@@ -296,6 +296,77 @@ export const fsDelete: SyscallHandler = async ({ db, userId }, args) => {
   }
 }
 
+const BINARY_MIME_PREFIXES = [
+  'image/',
+  'video/',
+  'audio/',
+  'font/',
+  'application/pdf',
+  'application/zip',
+  'application/gzip',
+  'application/x-gzip',
+  'application/octet-stream',
+]
+
+function isTextFile(mime_type: string, bytes: Buffer): boolean {
+  if (BINARY_MIME_PREFIXES.some((prefix) => mime_type.startsWith(prefix))) {
+    return false
+  }
+  if (mime_type.startsWith('text/')) return true
+  if (
+    mime_type === 'application/json'
+    || mime_type === 'application/javascript'
+    || mime_type === 'application/xml'
+  ) {
+    return true
+  }
+  if (bytes.includes(0)) return false
+  const text = bytes.toString('utf8')
+  return Buffer.from(text, 'utf8').equals(bytes)
+}
+
+export const fsRead: SyscallHandler = async ({ db, userId }, args) => {
+  try {
+    const fileId = args.fileId
+    if (typeof fileId !== 'number') throw new FsError('fileId is required')
+
+    await getFile(db, userId, fileId)
+
+    const [row] = await db
+      .select({
+        id: schema.file.id,
+        name: schema.file.name,
+        content: schema.file.content,
+        mime_type: schema.file.mime_type,
+      })
+      .from(schema.file)
+      .where(eq(schema.file.id, fileId))
+      .limit(1)
+
+    if (!row) throw new FsError('File not found', 404)
+
+    const bytes = Buffer.isBuffer(row.content)
+      ? row.content
+      : Buffer.from(row.content)
+
+    if (!isTextFile(row.mime_type, bytes)) {
+      throw new FsError('Cannot open, it\'s a binary file', 400)
+    }
+
+    return {
+      ok: true,
+      result: {
+        id: row.id,
+        name: row.name,
+        mime_type: row.mime_type,
+        content: bytes.toString('utf8'),
+      },
+    }
+  } catch (err) {
+    return fail(err)
+  }
+}
+
 export const fsSaveDesktopFile: SyscallHandler = async ({ db, userId }, args) => {
   try {
     const filename = typeof args.filename === 'string' ? args.filename.trim() : ''

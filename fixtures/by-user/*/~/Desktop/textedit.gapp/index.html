@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TextEdit</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    font-family: system-ui, sans-serif;
+    background: #fff;
+    color: #111;
+    display: flex;
+    flex-direction: column;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    body { background: #1a1a1a; color: #eee; }
+    textarea { background: #111; color: #eee; border-color: #333; }
+    button { background: #222; color: #eee; border-color: #444; }
+    button:hover:not(:disabled) { background: #333; }
+    .banner { background: #3a2e00; color: #fcd34d; border-color: #78580a; }
+    .filename-label { color: #999; }
+    .modal-panel { background: #1a1a1a; border-color: #444; }
+    .open-list button { border-color: #333; }
+    .open-list button:hover { background: #2a2a2a; }
+    .open-list button.selected { background: #2d3a5c; border-color: #4a6ab5; }
+  }
+
+  #waiting {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    gap: 8px;
+    color: #666;
+    font-size: 14px;
+  }
+
+  #shell {
+    display: none;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex: 0 0 auto;
+  }
+
+  .toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 0 0 auto;
+  }
+
+  .filename-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .filename-label {
+    font-size: 0.72rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .filename {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #333;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 13px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    flex: 0 0 auto;
+  }
+
+  button:hover:not(:disabled) { background: #f5f5f5; }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  textarea {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    resize: none;
+    font-family: monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    outline: none;
+  }
+
+  textarea:focus { border-color: #888; }
+
+  .statusbar {
+    flex: 0 0 auto;
+    min-height: 1.2em;
+    font-size: 12px;
+    color: #888;
+  }
+
+  .statusbar.error { color: #b91c1c; }
+
+  .banner {
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    font-size: 13px;
+    background: #fefce8;
+    color: #854d0e;
+    border: 1px solid #fde68a;
+    border-radius: 6px;
+  }
+
+  #open-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  #open-modal.open {
+    display: flex;
+  }
+
+  .modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+  }
+
+  .modal-panel {
+    position: relative;
+    z-index: 1;
+    width: min(420px, 100%);
+    max-height: min(70vh, 520px);
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+  }
+
+  .modal-header {
+    padding: 12px 14px;
+    font-size: 15px;
+    font-weight: 600;
+    border-bottom: 1px solid #e5e5e5;
+  }
+
+  .modal-path {
+    padding: 8px 14px;
+    font-size: 12px;
+    color: #666;
+    border-bottom: 1px solid #eee;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .open-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .open-list button {
+    width: 100%;
+    justify-content: flex-start;
+    text-align: left;
+    font-weight: 400;
+  }
+
+  .open-list button.selected {
+    background: #e8f0fe;
+    border-color: #7ba3f7;
+  }
+
+  .open-empty {
+    padding: 24px 12px;
+    text-align: center;
+    color: #888;
+    font-size: 13px;
+  }
+
+  .modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: 1px solid #e5e5e5;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { animation: spin 1s linear infinite; display: inline-block; }
+</style>
+</head>
+<body>
+
+<div id="waiting">
+  <span class="spin">⟳</span>
+  Waiting for initialization…
+</div>
+
+<div id="shell">
+  <div id="banner" class="banner" style="display:none"></div>
+  <div class="toolbar">
+    <div class="filename-wrap">
+      <span class="filename-label">File</span>
+      <span class="filename" id="filename">Untitled.txt</span>
+    </div>
+    <div class="toolbar-actions">
+      <button id="open-btn" type="button">Open…</button>
+      <button id="save-btn" type="button">
+        <span id="save-icon">💾</span>
+        <span id="save-label">Save</span>
+      </button>
+    </div>
+  </div>
+  <textarea id="editor" spellcheck="false"></textarea>
+  <div class="statusbar" id="statusbar"></div>
+</div>
+
+<div id="open-modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="open-title">
+  <div class="modal-backdrop" id="open-backdrop"></div>
+  <div class="modal-panel">
+    <div class="modal-header" id="open-title">Open file</div>
+    <div class="modal-path" id="open-path">Desktop</div>
+    <div class="open-list" id="open-list" role="listbox"></div>
+    <div class="modal-footer">
+      <button id="open-up-btn" type="button" disabled>Up</button>
+      <button id="open-cancel-btn" type="button">Cancel</button>
+      <button id="open-confirm-btn" type="button" disabled>Open</button>
+    </div>
+  </div>
+</div>
+
+<script src="yjs.js"></script>
+<script type="module">
+import { toParent } from './kernel.js'
+
+const doc = new Y.Doc()
+const yContent = doc.getText('content')
+
+const applyContent = (content) => doc.transact(() => {
+  yContent.delete(0, yContent.length)
+  yContent.insert(0, content ?? '')
+})
+
+const getContent = () => yContent.toString()
+const observeContent = (fn) => {
+  yContent.observe(fn)
+  return () => yContent.unobserve(fn)
+}
+
+const state = { status: 'waiting', filename: 'Untitled.txt', reason: null }
+let lastSavedContent = ''
+
+const toKernel = (msg) => window.parent.postMessage(msg, '*')
+
+const $waiting = document.getElementById('waiting')
+const $shell = document.getElementById('shell')
+const $filename = document.getElementById('filename')
+const $editor = document.getElementById('editor')
+const $openBtn = document.getElementById('open-btn')
+const $saveBtn = document.getElementById('save-btn')
+const $saveIcon = document.getElementById('save-icon')
+const $saveLabel = document.getElementById('save-label')
+const $statusbar = document.getElementById('statusbar')
+const $banner = document.getElementById('banner')
+
+const $openModal = document.getElementById('open-modal')
+const $openPath = document.getElementById('open-path')
+const $openList = document.getElementById('open-list')
+const $openUpBtn = document.getElementById('open-up-btn')
+const $openCancelBtn = document.getElementById('open-cancel-btn')
+const $openConfirmBtn = document.getElementById('open-confirm-btn')
+const $openBackdrop = document.getElementById('open-backdrop')
+
+const openState = {
+  open: false,
+  busy: false,
+  cwd: null,
+  parentId: null,
+  canGoUp: false,
+  folderName: 'Desktop',
+  entries: [],
+  selected: null,
+}
+
+const REASON_LABELS = {
+  fresh: 'New file',
+  corrupted: 'State was corrupted — starting fresh',
+  userCleared: 'Storage cleared — starting fresh',
+}
+
+const render = () => {
+  const isSaving = state.status === 'saving'
+  const modalBlocks = openState.open
+  $saveBtn.disabled = isSaving || modalBlocks
+  $openBtn.disabled = isSaving || modalBlocks
+  $saveIcon.textContent = isSaving ? '⟳' : '💾'
+  $saveIcon.className = isSaving ? 'spin' : ''
+  $saveLabel.textContent = isSaving ? 'Saving…' : 'Save'
+  $filename.textContent = state.filename
+  if (state.reason) {
+    $banner.textContent = REASON_LABELS[state.reason] ?? state.reason
+    $banner.style.display = 'block'
+  }
+}
+
+const setStatus = (text, isError = false) => {
+  $statusbar.textContent = text
+  $statusbar.classList.toggle('error', isError)
+}
+
+const setSaved = () => {
+  setStatus('Saved to desktop ' + new Date().toLocaleTimeString())
+  setTimeout(() => { setStatus('') }, 3000)
+}
+
+const showEditor = () => {
+  $waiting.style.display = 'none'
+  $shell.style.display = 'flex'
+  if (!openState.open) $editor.focus()
+  render()
+}
+
+const loadEditorContent = (filename, content) => {
+  applyContent(content ?? '')
+  lastSavedContent = content ?? ''
+  $editor.value = getContent()
+  state.filename = filename
+  state.reason = null
+  $banner.style.display = 'none'
+  render()
+}
+
+const init = ({ filename, content }) => {
+  loadEditorContent(filename || 'Untitled.txt', content ?? '')
+  state.status = 'ready'
+  showEditor()
+}
+
+const initFresh = ({ reason, filename } = {}) => {
+  state.status = 'ready'
+  state.reason = reason ?? 'fresh'
+  state.filename = filename || 'Untitled.txt'
+  showEditor()
+}
+
+const entryIcon = (entry) => {
+  if (entry.type === 'directory') {
+    return entry.name.endsWith('.gapp') ? '◆' : '📁'
+  }
+  return '📄'
+}
+
+const renderOpenList = () => {
+  $openPath.textContent = openState.folderName
+  $openUpBtn.disabled = openState.busy || !openState.canGoUp || openState.parentId == null
+  $openConfirmBtn.disabled = openState.busy || openState.selected?.type !== 'file'
+
+  $openList.replaceChildren()
+
+  if (openState.busy) {
+    const loading = document.createElement('div')
+    loading.className = 'open-empty'
+    loading.textContent = 'Loading…'
+    $openList.appendChild(loading)
+    return
+  }
+
+  if (!openState.entries.length) {
+    const empty = document.createElement('div')
+    empty.className = 'open-empty'
+    empty.textContent = 'This folder is empty'
+    $openList.appendChild(empty)
+    return
+  }
+
+  for (const entry of openState.entries) {
+    const btn = document.createElement('button')
+    btn.type = 'button'
+    btn.textContent = `${entryIcon(entry)} ${entry.name}`
+    btn.classList.toggle('selected', openState.selected?.type === entry.type && openState.selected?.id === entry.id)
+
+    btn.addEventListener('click', () => {
+      if (entry.type === 'directory') {
+        void browseDirectory(entry.id)
+        return
+      }
+      openState.selected = entry
+      renderOpenList()
+    })
+
+    btn.addEventListener('dblclick', () => {
+      if (entry.type === 'directory') {
+        void browseDirectory(entry.id)
+        return
+      }
+      openState.selected = entry
+      void confirmOpen()
+    })
+
+    $openList.appendChild(btn)
+  }
+}
+
+const setModalOpen = (open) => {
+  openState.open = open
+  $openModal.classList.toggle('open', open)
+  $openModal.setAttribute('aria-hidden', open ? 'false' : 'true')
+  if (open) {
+    $shell.setAttribute('inert', '')
+    $waiting.setAttribute('inert', '')
+  } else {
+    $shell.removeAttribute('inert')
+    $waiting.removeAttribute('inert')
+    $editor.focus()
+  }
+  render()
+}
+
+const browseDirectory = async (directoryId = null) => {
+  openState.busy = true
+  openState.selected = null
+  renderOpenList()
+
+  try {
+    const payload = directoryId == null ? {} : { directoryId }
+    const result = await toParent('fs:browse', payload)
+    openState.cwd = result.directory_id
+    openState.parentId = result.parent_id
+    openState.canGoUp = result.can_go_up
+    openState.folderName = result.name
+    openState.entries = result.entries
+  } catch (err) {
+    setStatus(err instanceof Error ? err.message : 'Failed to open folder', true)
+    closeOpenModal()
+    return
+  } finally {
+    openState.busy = false
+    renderOpenList()
+  }
+}
+
+const closeOpenModal = () => {
+  setModalOpen(false)
+}
+
+const openOpenModal = async () => {
+  if (openState.open || state.status === 'saving') return
+  setModalOpen(true)
+  await browseDirectory(null)
+}
+
+const confirmOpen = async () => {
+  const selected = openState.selected
+  if (!selected || selected.type !== 'file' || openState.busy) return
+
+  openState.busy = true
+  renderOpenList()
+
+  try {
+    const result = await toParent('fs:read', { fileId: selected.id })
+    loadEditorContent(result.name, result.content)
+    state.status = 'ready'
+    setStatus(`Opened ${result.name}`)
+    setTimeout(() => { setStatus('') }, 3000)
+    closeOpenModal()
+  } catch (err) {
+    setStatus(err instanceof Error ? err.message : 'Failed to open file', true)
+    closeOpenModal()
+  } finally {
+    openState.busy = false
+  }
+}
+
+const onDie = async () => {
+  const isDirty = getContent() !== lastSavedContent
+  if (!isDirty) return 'die'
+  return window.confirm('You have unsaved changes. Close anyway?') ? 'die' : 'cancel'
+}
+
+const save = () => {
+  if (state.status === 'saving' || openState.open) return
+
+  const suggested = state.filename || 'Untitled.txt'
+  const chosen = window.prompt('Save to your desktop as:', suggested)
+  if (chosen === null) return
+
+  const filename = chosen.trim()
+  if (!filename) {
+    setStatus('Save cancelled — filename is required', true)
+    return
+  }
+
+  state.filename = filename
+  state.status = 'saving'
+  setStatus('')
+  render()
+  toKernel({ type: 'save', filename, content: getContent() })
+}
+
+window.addEventListener('message', (event) => {
+  const data = event.data
+  if (!data || typeof data !== 'object' || !data.type) return
+
+  switch (data.type) {
+    case 'init':
+      init(data)
+      break
+    case 'init:fresh':
+      initFresh(data)
+      break
+    case 'save:complete':
+      lastSavedContent = getContent()
+      state.status = 'ready'
+      if (typeof data.filename === 'string' && data.filename) {
+        state.filename = data.filename
+      }
+      render()
+      setSaved()
+      break
+    case 'save:error':
+      state.status = 'ready'
+      render()
+      setStatus(data.message || 'Save failed', true)
+      break
+    case 'die':
+      void onDie().then((result) => {
+        toKernel({ type: 'die:response', result })
+      })
+      break
+  }
+})
+
+$editor.addEventListener('input', () => applyContent($editor.value))
+observeContent(() => {
+  const value = getContent()
+  if ($editor.value !== value) $editor.value = value
+})
+
+$openBtn.addEventListener('click', () => { void openOpenModal() })
+$openCancelBtn.addEventListener('click', closeOpenModal)
+$openBackdrop.addEventListener('click', closeOpenModal)
+$openUpBtn.addEventListener('click', () => {
+  if (openState.busy || !openState.canGoUp || openState.parentId == null) return
+  void browseDirectory(openState.parentId)
+})
+$openConfirmBtn.addEventListener('click', () => { void confirmOpen() })
+
+$saveBtn.addEventListener('click', save)
+document.addEventListener('keydown', (e) => {
+  if (openState.open) {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      closeOpenModal()
+    }
+    return
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+    e.preventDefault()
+    save()
+  }
+})
+
+toKernel({ type: 'ready' })
+</script>
+</body>
+</html>

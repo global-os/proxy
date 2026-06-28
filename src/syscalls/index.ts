@@ -2,6 +2,7 @@ import {
   fsBrowse,
   fsDelete,
   fsMkdir,
+  fsRead,
   fsRename,
   fsSaveDesktopFile,
 } from './fs.js'
@@ -12,6 +13,7 @@ const handlers: Record<string, SyscallHandler> = {
   'fs.mkdir': fsMkdir,
   'fs.rename': fsRename,
   'fs.delete': fsDelete,
+  'fs.read': fsRead,
   'fs.saveDesktopFile': fsSaveDesktopFile,
 }
 

@@ -189,6 +189,9 @@ export class WorkspaceKernel {
       case 'fs:delete':
         void this.onFsOp('fs.delete', message, post, 'fs:delete', { notifyDesktop: true })
         break
+      case 'fs:read':
+        void this.onFsOp('fs.read', message, post, 'fs:read')
+        break
       case 'die:response':
         break
       case 'trace:subscribe':
