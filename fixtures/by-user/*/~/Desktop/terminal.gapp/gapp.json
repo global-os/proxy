@@ -1,6 +1,6 @@
 {
   "name": "terminal",
-  "icon": "robot",
+  "icon": "/.Resources/icons/16x16/robot.bmp",
   "entry": "index.html",
   "type": "module"
 }

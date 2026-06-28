@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import { isZanyIconId } from '../gapp/icon-ids.js'
+import { normalizeResourceIconPath } from '../gapp/icon-ids.js'
 import type { GappManifest } from '../gapp/types.js'
 import * as schema from '../db/schema.js'
 
@@ -26,7 +26,7 @@ export async function readGappManifest(
   }
 }
 
-export async function resolveGappIconId(
+export async function resolveGappIconPath(
   db: NodePgDatabase<typeof schema>,
   directoryId: number,
   bundleName: string,
@@ -35,6 +35,6 @@ export async function resolveGappIconId(
 
   const manifest = await readGappManifest(db, directoryId)
   const icon = manifest?.icon
-  if (typeof icon === 'string' && isZanyIconId(icon)) return icon
-  return undefined
+  if (typeof icon !== 'string') return undefined
+  return normalizeResourceIconPath(icon) ?? undefined
 }

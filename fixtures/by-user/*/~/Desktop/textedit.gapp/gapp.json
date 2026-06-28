@@ -1,5 +1,5 @@
 {
   "name": "textedit",
-  "icon": "heart",
+  "icon": "/.Resources/icons/16x16/heart.bmp",
   "entry": "index.html"
 }

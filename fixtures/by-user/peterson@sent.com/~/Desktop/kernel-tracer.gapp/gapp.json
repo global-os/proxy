@@ -1,6 +1,6 @@
 {
   "name": "kernel-tracer",
-  "icon": "alien",
+  "icon": "/.Resources/icons/16x16/alien.bmp",
   "entry": "index.html",
   "type": "module"
 }

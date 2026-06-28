@@ -19,7 +19,7 @@ type DesktopItem = {
   id: number
   name: string
   mime_type?: string
-  /** Zany icon id from gapp.json → Users/.local/icons/{icon}.bmp */
+  /** Absolute path to icon BMP from gapp.json (e.g. /.Resources/icons/16x16/gem.bmp) */
   icon?: string
 }
 
@@ -321,7 +321,7 @@ export function Workspace({ workspaceId, children }: WorkspaceProps) {
               onClick={launchable ? () => void openProgram(item) : undefined}
             >
               {item.icon
-                ? <IconBitmap src={`/api/fs/icons/${item.icon}`} alt="" />
+                ? <IconBitmap src={`/api/fs/icons?path=${encodeURIComponent(item.icon)}`} alt="" />
                 : <IconShape isDir={item.type === 'directory'} />}
               <IconLabel>{item.name}</IconLabel>
             </IconBox>

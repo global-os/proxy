@@ -7,7 +7,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const outDir = path.join(root, 'fixtures/by-user', '*', '~', '.local', 'icons')
+const outDir = path.join(root, 'fixtures/by-user', '*', '.Resources', 'icons', '16x16')
 
 /** @type {Record<string, [number, number, number]>} */
 const P = {

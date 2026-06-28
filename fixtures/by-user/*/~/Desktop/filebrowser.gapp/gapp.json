@@ -1,6 +1,6 @@
 {
   "name": "filebrowser",
-  "icon": "gem",
+  "icon": "/.Resources/icons/16x16/gem.bmp",
   "entry": "index.html",
   "type": "module"
 }

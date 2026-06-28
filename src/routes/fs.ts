@@ -6,7 +6,7 @@ import * as schema from '../db/schema.js'
 import { resolveDesktopDirectoryId } from '../services/desktop-files.js'
 import { resolveDesktopEntryIcon } from '../services/global-pc-icons.js'
 import { ensureGlobalPcForUser, resolveGlobalPcIdForWorkspace } from '../services/global-pc.js'
-import { readLocalIconBmp } from '../services/local-icons.js'
+import { readResourceIconBmp } from '../services/local-icons.js'
 
 const router = new Hono<Env>()
 
@@ -72,13 +72,15 @@ router.get('/desktop', async (c) => {
   })
 })
 
-router.get('/icons/:iconId', async (c) => {
+router.get('/icons', async (c) => {
   const user = c.get('user')
   if (!user) return c.json({ error: 'Unauthorized' }, 401)
 
-  const iconId = c.req.param('iconId').replace(/\.bmp$/i, '')
+  const iconPath = c.req.query('path')
+  if (!iconPath) return c.json({ error: 'path is required' }, 400)
+
   const db = c.get('db')
-  const bmp = await readLocalIconBmp(db, user.id, iconId)
+  const bmp = await readResourceIconBmp(db, user.id, iconPath)
   if (!bmp) return c.notFound()
 
   return c.body(new Uint8Array(bmp), 200, {

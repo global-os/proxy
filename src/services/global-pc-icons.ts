@@ -1,8 +1,8 @@
 import { and, eq } from 'drizzle-orm'
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres'
-import { isZanyIconId } from '../gapp/icon-ids.js'
+import { isResourceIconPath, normalizeResourceIconPath } from '../gapp/icon-ids.js'
 import * as schema from '../db/schema.js'
-import { resolveGappIconId } from './gapp-metadata.js'
+import { resolveGappIconPath } from './gapp-metadata.js'
 
 export async function getGlobalPcIconMap(
   db: NodePgDatabase<typeof schema>,
@@ -18,8 +18,9 @@ export async function getGlobalPcIconMap(
 
   const map: Record<string, string> = {}
   for (const row of rows) {
-    if (isZanyIconId(row.icon_id)) {
-      map[row.entry_name] = row.icon_id
+    const iconPath = normalizeResourceIconPath(row.icon_id)
+    if (iconPath) {
+      map[row.entry_name] = iconPath
     }
   }
   return map
@@ -29,16 +30,16 @@ export async function setGlobalPcIconIfAbsent(
   db: NodePgDatabase<typeof schema>,
   globalPcId: number,
   entryName: string,
-  iconId: string,
+  iconPath: string,
 ): Promise<void> {
-  if (!isZanyIconId(iconId)) return
+  if (!isResourceIconPath(iconPath)) return
 
   await db
     .insert(schema.globalPcIcon)
     .values({
       global_pc_id: globalPcId,
       entry_name: entryName,
-      icon_id: iconId,
+      icon_id: iconPath,
     })
     .onConflictDoNothing({
       target: [schema.globalPcIcon.global_pc_id, schema.globalPcIcon.entry_name],
@@ -49,10 +50,10 @@ export async function setGlobalPcIcon(
   db: NodePgDatabase<typeof schema>,
   globalPcId: number,
   entryName: string,
-  iconId: string,
+  iconPath: string,
 ): Promise<void> {
-  if (!isZanyIconId(iconId)) {
-    throw new Error('Invalid icon id')
+  if (!isResourceIconPath(iconPath)) {
+    throw new Error('Invalid icon path')
   }
 
   await db
@@ -60,11 +61,11 @@ export async function setGlobalPcIcon(
     .values({
       global_pc_id: globalPcId,
       entry_name: entryName,
-      icon_id: iconId,
+      icon_id: iconPath,
     })
     .onConflictDoUpdate({
       target: [schema.globalPcIcon.global_pc_id, schema.globalPcIcon.entry_name],
-      set: { icon_id: iconId },
+      set: { icon_id: iconPath },
     })
 }
 
@@ -94,11 +95,12 @@ export async function resolveDesktopEntryIcon(
     ))
     .limit(1)
 
-  if (row && isZanyIconId(row.icon_id)) {
-    return row.icon_id
+  const storedPath = row ? normalizeResourceIconPath(row.icon_id) : undefined
+  if (storedPath) {
+    return storedPath
   }
 
-  const manifestIcon = await resolveGappIconId(db, directoryId, entryName)
+  const manifestIcon = await resolveGappIconPath(db, directoryId, entryName)
   if (manifestIcon) {
     await setGlobalPcIconIfAbsent(db, globalPcId, entryName, manifestIcon)
     return manifestIcon

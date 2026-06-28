@@ -1,6 +1,6 @@
 {
   "name": "squint-editor",
-  "icon": "wizard",
+  "icon": "/.Resources/icons/16x16/wizard.bmp",
   "version": "1.0.1",
   "entry": "index.html",
   "type": "module",
