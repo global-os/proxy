@@ -199,9 +199,6 @@ export class SessionKernel {
         this.tracers.delete(binding.windowId)
         post({ type: 'trace:unsubscribed' })
         break
-      case 'kernel:ping':
-        post({ type: 'kernel:attached' })
-        break
     }
   }
 
