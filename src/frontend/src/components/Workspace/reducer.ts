@@ -116,14 +116,30 @@ export function reducer(state: State, action: WorkspaceAction): State {
         dragOrigin: action.payload,
       }
     }
-    case WorkspaceActionKind.START_DRAGGING_WINDOW: {
+    case WorkspaceActionKind.RAISE_WINDOW: {
+      if (action.index < 0 || action.index >= state.windows.length) return state
+      const win = state.windows[action.index]
+      const maxZ = state.windows.reduce((m, w) => Math.max(m, w.zIndex), 0)
+      if (win.zIndex >= maxZ) return state
       return {
         ...state,
         windows: replaceNth(state.windows, action.index, {
-          ...state.windows[action.index],
+          ...win,
           zIndex: state.zIndexCounter,
         }),
         zIndexCounter: state.zIndexCounter + 1,
+      }
+    }
+    case WorkspaceActionKind.START_DRAGGING_WINDOW: {
+      const win = state.windows[action.index]
+      const zIndex = Math.max(win.zIndex, state.zIndexCounter)
+      return {
+        ...state,
+        windows: replaceNth(state.windows, action.index, {
+          ...win,
+          zIndex,
+        }),
+        zIndexCounter: zIndex + 1,
         dragOrigin: action.payload,
         draggingWindow: action.index,
       }

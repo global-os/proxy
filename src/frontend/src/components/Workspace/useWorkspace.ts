@@ -40,16 +40,24 @@ export function useWorkspace(onStartup?: (actions: WorkspaceActions) => void) {
 
   const onMouseDown = useCallback((event: MouseEvent) => {
     const target = event.target as HTMLElement
+    const windowEl = target.closest('[data-window-index]')
+    if (!windowEl) return
+
     const index = Number.parseInt(
-      target.getAttribute('data-window-index') ?? '0',
-      10
+      windowEl.getAttribute('data-window-index') ?? '-1',
+      10,
     )
-    const resizeHandle = target.getAttribute(
-      'data-resize-handle'
+    if (index < 0) return
+
+    event.preventDefault()
+
+    dispatch({ type: WorkspaceActionKind.RAISE_WINDOW, index })
+
+    const resizeHandle = target.closest('[data-resize-handle]')?.getAttribute(
+      'data-resize-handle',
     ) as ResizeHandle | null
 
     if (resizeHandle === 'bottom-left' || resizeHandle === 'bottom-right') {
-      event.preventDefault()
       dispatch({
         type: WorkspaceActionKind.START_RESIZING_WINDOW,
         index,
@@ -59,12 +67,13 @@ export function useWorkspace(onStartup?: (actions: WorkspaceActions) => void) {
       return
     }
 
-    event.preventDefault()
-    dispatch({
-      type: WorkspaceActionKind.START_DRAGGING_WINDOW,
-      index,
-      payload: [event.clientX, event.clientY],
-    })
+    if (target.closest('[data-title-bar]')) {
+      dispatch({
+        type: WorkspaceActionKind.START_DRAGGING_WINDOW,
+        index,
+        payload: [event.clientX, event.clientY],
+      })
+    }
   }, [])
 
   const onMouseUp = useCallback(() => {

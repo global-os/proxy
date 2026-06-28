@@ -45,6 +45,7 @@ export enum WorkspaceActionKind {
   FOCUS_WINDOW = 'FOCUS_WINDOW',
   CLOSE_WINDOW = 'CLOSE_WINDOW',
   DRAG_WINDOW = 'DRAG_WINDOW',
+  RAISE_WINDOW = 'RAISE_WINDOW',
   START_DRAGGING_WINDOW = 'START_DRAGGING_WINDOW',
   STOP_DRAGGING_WINDOW = 'STOP_DRAGGING_WINDOW',
   START_RESIZING_WINDOW = 'START_RESIZING_WINDOW',
@@ -73,6 +74,10 @@ export type WorkspaceAction =
   | {
       type: WorkspaceActionKind.DRAG_WINDOW
       payload: [number, number]
+    }
+  | {
+      type: WorkspaceActionKind.RAISE_WINDOW
+      index: number
     }
   | {
       type: WorkspaceActionKind.START_DRAGGING_WINDOW

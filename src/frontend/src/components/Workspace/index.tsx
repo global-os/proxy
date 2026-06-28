@@ -277,19 +277,26 @@ export function Workspace({ sessionId, children }: WorkspaceProps) {
       </IconGrid>
       {launchMessage && <LaunchStatus>{launchMessage}</LaunchStatus>}
       <SessionLogger sessionId={sessionId} />
-      {state.windows.map((win, i) => (
-        <WorkspaceWindow
-          key={win.id}
-          win={win}
-          windowIndex={i}
-          isInteracting={!!state.dragOrigin || !!state.resizeOrigin}
-          left={computeX(win.x, win.width) + 'px'}
-          top={computeY(win.y, win.height) + 'px'}
-          onMouseDown={onMouseDown}
-          onClose={() => void closeWindow(win.id)}
-          onIframeRef={el => bindWindow(win, el)}
-        />
-      ))}
+      {state.windows.map((win, i) => {
+        const topZIndex = state.windows.reduce(
+          (max, w) => Math.max(max, w.zIndex),
+          0,
+        )
+        return (
+          <WorkspaceWindow
+            key={win.id}
+            win={win}
+            windowIndex={i}
+            isInteracting={!!state.dragOrigin || !!state.resizeOrigin}
+            frontmost={win.zIndex >= topZIndex}
+            left={computeX(win.x, win.width) + 'px'}
+            top={computeY(win.y, win.height) + 'px'}
+            onMouseDown={onMouseDown}
+            onClose={() => void closeWindow(win.id)}
+            onIframeRef={el => bindWindow(win, el)}
+          />
+        )
+      })}
     </Frame>
   )
 }

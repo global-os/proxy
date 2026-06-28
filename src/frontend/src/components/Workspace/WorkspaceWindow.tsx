@@ -73,7 +73,7 @@ const TitleBar = createComponent(
     borderBottom: '1px solid #2e1065',
   }),
   'div',
-  ['data-window-index', 'onMouseDown']
+  ['data-window-index', 'data-title-bar', 'onMouseDown']
 )
 
 const TitleIcon = createComponent(
@@ -184,6 +184,7 @@ const ChromeButton = createComponent(
 )
 
 const ContentFrame = createComponent(() => ({
+  position: 'relative',
   flex: '1 1 auto',
   minHeight: 0,
   display: 'flex',
@@ -191,7 +192,7 @@ const ContentFrame = createComponent(() => ({
   background: '#c0c0c0',
   padding: '2px',
   ...insetBorder,
-}))
+}), 'div', ['data-window-index', 'onMouseDown'])
 
 const ResizeHandle = createComponent(
   ({
@@ -218,13 +219,13 @@ const ResizeHandle = createComponent(
 )
 
 const StyledIframe = createComponent(
-  ({ dragging }: { dragging: boolean }) => ({
+  ({ dragging, frontmost }: { dragging: boolean; frontmost: boolean }) => ({
     border: '0',
     flex: '1 1 auto',
     minHeight: 0,
     width: '100%',
     background: '#ffffff',
-    pointerEvents: dragging ? 'none' : 'auto',
+    pointerEvents: dragging || !frontmost ? 'none' : 'auto',
     display: 'block',
   }),
   'iframe',
@@ -235,6 +236,7 @@ type Props = {
   win: AppWindow
   windowIndex: number
   isInteracting: boolean
+  frontmost: boolean
   left: string
   top: string
   onMouseDown: (e: MouseEvent) => void
@@ -246,6 +248,7 @@ export function WorkspaceWindow({
   win,
   windowIndex,
   isInteracting,
+  frontmost,
   left,
   top,
   onMouseDown,
@@ -261,7 +264,11 @@ export function WorkspaceWindow({
       zIndex={win.zIndex}
       interacting={isInteracting}
     >
-      <TitleBar data-window-index={windowIndex} onMouseDown={onMouseDown}>
+      <TitleBar
+        data-window-index={windowIndex}
+        data-title-bar=""
+        onMouseDown={onMouseDown}
+      >
         <TitleIcon aria-hidden>◆</TitleIcon>
         <TitleMeta>
           <TitleLabel>{win.title}</TitleLabel>
@@ -290,27 +297,28 @@ export function WorkspaceWindow({
           </ChromeButton>
         </TitleButtons>
       </TitleBar>
-      <ContentFrame>
+      <ContentFrame data-window-index={windowIndex} onMouseDown={onMouseDown}>
         <StyledIframe
           dragging={isInteracting}
+          frontmost={frontmost}
           src={win.src}
           innerRef={onIframeRef}
         />
+        <ResizeHandle
+          cursor="nesw-resize"
+          side="left"
+          data-window-index={windowIndex}
+          data-resize-handle="bottom-left"
+          onMouseDown={onMouseDown}
+        />
+        <ResizeHandle
+          cursor="nwse-resize"
+          side="right"
+          data-window-index={windowIndex}
+          data-resize-handle="bottom-right"
+          onMouseDown={onMouseDown}
+        />
       </ContentFrame>
-      <ResizeHandle
-        cursor="nesw-resize"
-        side="left"
-        data-window-index={windowIndex}
-        data-resize-handle="bottom-left"
-        onMouseDown={onMouseDown}
-      />
-      <ResizeHandle
-        cursor="nwse-resize"
-        side="right"
-        data-window-index={windowIndex}
-        data-resize-handle="bottom-right"
-        onMouseDown={onMouseDown}
-      />
     </Chrome>
   )
 }
