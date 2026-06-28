@@ -1,7 +1,6 @@
 import { h, render } from 'preact'
-import { useCallback, useEffect, useState } from 'preact/hooks'
+import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import { toParent } from './kernel.js'
-import { useRetryTask } from './use-retry-task.js'
 
 function entryIcon(entry) {
   if (entry.type === 'directory') {
@@ -35,7 +34,7 @@ function FileBrowserApp() {
   const [selected, setSelected] = useState(null)
   const [status, setStatus] = useState('Loading…')
   const [statusError, setStatusError] = useState(false)
-  const { run: runRetry, cancel: cancelRetry } = useRetryTask()
+  const loadGeneration = useRef(0)
 
   const applyBrowse = useCallback((result) => {
     setCwd(result.directory_id)
@@ -47,40 +46,45 @@ function FileBrowserApp() {
   }, [])
 
   const loadDirectory = useCallback(async (directoryId) => {
+    const generation = ++loadGeneration.current
     setBusy(true)
+    setStatus('Loading…')
     setStatusError(false)
 
-    await runRetry({
-      task: async () => {
-        const payload = directoryId == null ? {} : { directoryId }
-        return toParent('fs:browse', payload)
-      },
-      onAttempt: (attempt) => {
-        setStatus(attempt > 0 ? 'Retrying…' : 'Loading…')
-      },
-      onSuccess: (result) => {
-        applyBrowse(result)
-        setStatus(`${result.entries.length} item${result.entries.length === 1 ? '' : 's'}`)
-      },
-      onFailure: (err) => {
-        setStatus(err instanceof Error ? err.message : 'Failed to load folder')
-        setStatusError(true)
-      },
-      onFinally: () => setBusy(false),
-    })
-  }, [applyBrowse, runRetry])
+    try {
+      const payload = directoryId == null ? {} : { directoryId }
+      const result = await toParent('fs:browse', payload)
+      if (generation !== loadGeneration.current) return
+      applyBrowse(result)
+      setStatus(`${result.entries.length} item${result.entries.length === 1 ? '' : 's'}`)
+    } catch (err) {
+      if (generation !== loadGeneration.current) return
+      setStatus(err instanceof Error ? err.message : 'Failed to load folder')
+      setStatusError(true)
+    } finally {
+      if (generation === loadGeneration.current) setBusy(false)
+    }
+  }, [applyBrowse])
 
   useEffect(() => {
-    void loadDirectory(null)
-    return cancelRetry
-    // cancelRetry bumps generation so Strict Mode remount drops stale browse.
-  }, [loadDirectory, cancelRetry])
+    const run = async () => {
+      await loadDirectory(null)
+    }
+    run()
+    return () => {
+      loadGeneration.current += 1
+    }
+  }, [loadDirectory])
 
   const hasSelection = selected != null
 
-  const goUp = () => {
+  const goUp = async () => {
     if (busy || !canGoUp || parentId == null) return
-    void loadDirectory(parentId)
+    await loadDirectory(parentId)
+  }
+
+  const refresh = async () => {
+    await loadDirectory(cwd)
   }
 
   const createFolder = async () => {
@@ -165,8 +169,8 @@ function FileBrowserApp() {
           key: `${entry.type}-${entry.id}`,
           class: `list-row${isSelected(selected, entry) ? ' selected' : ''}`,
           onClick: () => setSelected(entry),
-          onDblClick: () => {
-            if (entry.type === 'directory') void loadDirectory(entry.id)
+          onDblClick: async () => {
+            if (entry.type === 'directory') await loadDirectory(entry.id)
           },
         },
         h('span', { class: 'icon' }, entryIcon(entry)),
@@ -185,22 +189,22 @@ function FileBrowserApp() {
       h('button', {
         type: 'button',
         disabled: busy,
-        onClick: () => void createFolder(),
+        onClick: createFolder,
       }, 'New Folder'),
       h('button', {
         type: 'button',
         disabled: busy || !hasSelection,
-        onClick: () => void renameSelected(),
+        onClick: renameSelected,
       }, 'Rename'),
       h('button', {
         type: 'button',
         disabled: busy || !hasSelection,
-        onClick: () => void deleteSelected(),
+        onClick: deleteSelected,
       }, 'Delete'),
       h('button', {
         type: 'button',
         disabled: busy,
-        onClick: () => void loadDirectory(cwd),
+        onClick: refresh,
       }, 'Refresh'),
       h('div', { class: 'pathbar' }, folderName),
     ),
