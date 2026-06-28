@@ -1,7 +1,7 @@
-import type { SessionLogWriter } from '../services/session-logger.js'
+import type { WorkspaceLogWriter } from '../services/workspace-logger.js'
 
 export type GappCompileContext = {
-  sessionId: number
+  workspaceId: number
   bundleName?: string
-  log: SessionLogWriter
+  log: WorkspaceLogWriter
 }

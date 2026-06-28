@@ -1,0 +1,6 @@
+{
+  "name": "kernel-tracer",
+  "icon": "alien",
+  "entry": "index.html",
+  "type": "module"
+}

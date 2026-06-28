@@ -54,7 +54,6 @@ export type CreatedInstance = {
   restarted: boolean
 }
 
-/** Create a new runtime instance for a process (apps may call this multiple times). */
 export async function createInstanceForProcess(processId: number): Promise<CreatedInstance> {
   const [processRow] = await db
     .select({
@@ -89,7 +88,6 @@ export async function createInstanceForProcess(processId: number): Promise<Creat
   return toCreatedInstance(instanceRow.id, instanceRow.slug, false)
 }
 
-/** Ensure the process has a live primary instance, restarting a stopped one when possible. */
 export async function ensurePrimaryInstance(processId: number): Promise<CreatedInstance> {
   const [live] = await db
     .select({
@@ -133,27 +131,4 @@ export async function ensurePrimaryInstance(processId: number): Promise<CreatedI
   }
 
   return createInstanceForProcess(processId)
-}
-
-export async function findOrCreateProcess(sessionId: number, directoryId: number) {
-  const [existing] = await db
-    .select({ id: schema.process.id })
-    .from(schema.process)
-    .where(and(
-      eq(schema.process.session_id, sessionId),
-      eq(schema.process.directory_id, directoryId),
-    ))
-    .limit(1)
-
-  if (existing) return existing
-
-  const [created] = await db
-    .insert(schema.process)
-    .values({
-      session_id: sessionId,
-      directory_id: directoryId,
-    })
-    .returning({ id: schema.process.id })
-
-  return created
 }

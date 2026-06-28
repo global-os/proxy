@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { getOrCreateImage } from '../db/image.js'
-import { createSessionLogWriter } from '../services/session-logger.js'
-import { resolveSessionIdForInstance } from '../services/resolve-session-for-instance.js'
+import { createWorkspaceLogWriter } from '../services/workspace-logger.js'
+import { resolveWorkspaceIdForInstance } from '../services/resolve-workspace-for-instance.js'
 import { db } from '../db/index.js'
 import * as schema from '../db/schema.js'
 import { PENDING_INSTANCE_CHECKSUM } from './instance-constants.js'
@@ -137,6 +137,11 @@ async function loadInstanceReady(instanceId: number): Promise<boolean> {
   let checksum = row.directory_checksum
 
   if (!imageId || checksum === PENDING_INSTANCE_CHECKSUM) {
+    if (row.process_id == null) {
+      setInstancePrepareFailed(instanceId, 'Instance has no process')
+      return false
+    }
+
     const [processRow] = await db
       .select({ directory_id: schema.process.directory_id })
       .from(schema.process)
@@ -148,8 +153,8 @@ async function loadInstanceReady(instanceId: number): Promise<boolean> {
       return false
     }
 
-    const sessionId = await resolveSessionIdForInstance(instanceId)
-    const sessionLog = sessionId ? createSessionLogWriter(sessionId) : null
+    const workspaceId = await resolveWorkspaceIdForInstance(instanceId)
+    const workspaceLog = workspaceId ? createWorkspaceLogWriter(workspaceId) : null
 
     console.log(`[instance] resolving image for ${instanceId} directory ${processRow.directory_id}`)
     setInstancePrepareProgress(instanceId, 'resolving-image', 'Resolving app bundle…')
@@ -158,10 +163,10 @@ async function loadInstanceReady(instanceId: number): Promise<boolean> {
         setInstancePrepareProgress(instanceId, 'building-snapshot', message)
       },
       compile:
-        sessionId && sessionLog
+        workspaceId && workspaceLog
           ? {
-              sessionId,
-              log: sessionLog,
+              workspaceId,
+              log: workspaceLog,
             }
           : undefined,
     })
@@ -220,9 +225,9 @@ export async function ensureInstanceReady(instanceId: number): Promise<boolean> 
         : undefined
     setInstancePrepareFailed(instanceId, message)
     console.error(`[instance] prepare failed for ${instanceId}:`, err)
-    const sessionId = await resolveSessionIdForInstance(instanceId)
-    if (sessionId) {
-      const log = createSessionLogWriter(sessionId)
+    const workspaceId = await resolveWorkspaceIdForInstance(instanceId)
+    if (workspaceId) {
+      const log = createWorkspaceLogWriter(workspaceId)
       await log.error('instance', message, detail || undefined)
     }
     return false

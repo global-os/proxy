@@ -39,7 +39,7 @@ function AdminPage() {
     <Page>
       <VerticalFrame width="65em">
         <Link
-          to="/sessions"
+          to="/workspaces"
           className="inline-block mb-5 text-sm text-gray-500 no-underline hover:text-gray-700 transition-colors duration-100"
         >
           ← Back to Sessions

@@ -1,8 +1,5 @@
-import { pgTable, text, timestamp, boolean, index, serial, integer, pgEnum, customType } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, index, serial, integer, pgEnum, customType, uniqueIndex } from "drizzle-orm/pg-core";
 
-// bytea was a first-class export in drizzle-orm beta (^1.0.0-beta.9-e89174b).
-// Stable drizzle-orm (^0.45.2) dropped it — use customType in the meantime.
-// To revert: replace this block with `bytea` in the import above once it's re-exported.
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({
   dataType() { return 'bytea' },
 });
@@ -20,6 +17,7 @@ export const user = pgTable("user", {
     .notNull(),
 });
 
+/** Better Auth login session — not a workspace. */
 export const session = pgTable(
   "session",
   {
@@ -116,19 +114,72 @@ export const image = pgTable('image', {
   tar_bytes: bytea('tar_bytes'),
 });
 
-export const process = pgTable('process', {
+/** A user's Global PC — tasks, workspaces, and icon prefs. */
+export const globalPc = pgTable('global_pc', {
   id: serial('id').primaryKey(),
-  session_id: serial('session_id').notNull().references(() => sessions.id),
-  directory_id: integer('directory_id').notNull().references(() => directory.id),
+  user_id: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+  name: text('name').notNull().default('My Global PC'),
+  created_at: timestamp('created_at').defaultNow().notNull(),
+  updated_at: timestamp('updated_at')
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
 }, (table) => [
-  index('process_session_directory_uidx').on(table.session_id, table.directory_id),
+  index('global_pc_user_id_idx').on(table.user_id),
 ]);
 
-/** Live runtime for a process. Public URL host = `{slug}.app.onetrueos.com`. */
+export const globalPcIcon = pgTable('global_pc_icon', {
+  id: serial('id').primaryKey(),
+  global_pc_id: integer('global_pc_id').notNull().references(() => globalPc.id, { onDelete: 'cascade' }),
+  entry_name: text('entry_name').notNull(),
+  icon_id: text('icon_id').notNull(),
+  created_at: timestamp('created_at').defaultNow().notNull(),
+  updated_at: timestamp('updated_at')
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
+}, (table) => [
+  index('global_pc_icon_global_pc_id_idx').on(table.global_pc_id),
+  uniqueIndex('global_pc_icon_entry_uidx').on(table.global_pc_id, table.entry_name),
+]);
+
+/** Persistent desk on a Global PC. */
+export const workspace = pgTable('workspace', {
+  id: serial('id').primaryKey(),
+  user_id: text('user_id').notNull().references(() => user.id),
+  global_pc_id: integer('global_pc_id').references(() => globalPc.id),
+  name: text('name'),
+}, (table) => [
+  index('workspace_global_pc_id_idx').on(table.global_pc_id),
+]);
+
+/** Workspace-local .gapp execution — owns windows and instances. Not a task. */
+export const process = pgTable('process', {
+  id: serial('id').primaryKey(),
+  workspace_id: integer('workspace_id').notNull().references(() => workspace.id, { onDelete: 'cascade' }),
+  directory_id: integer('directory_id').notNull().references(() => directory.id),
+}, (table) => [
+  index('process_workspace_id_idx').on(table.workspace_id),
+  uniqueIndex('process_workspace_directory_uidx').on(table.workspace_id, table.directory_id),
+]);
+
+/** Global PC work — short or long lived; not workspace-scoped. */
+export const task = pgTable('task', {
+  id: serial('id').primaryKey(),
+  global_pc_id: integer('global_pc_id').notNull().references(() => globalPc.id, { onDelete: 'cascade' }),
+  directory_id: integer('directory_id').references(() => directory.id),
+  created_at: timestamp('created_at').defaultNow().notNull(),
+  last_used_at: timestamp('last_used_at').defaultNow().notNull(),
+}, (table) => [
+  index('task_global_pc_id_idx').on(table.global_pc_id),
+]);
+
+/** Live runtime for a process or task. Public URL = `{slug}.app.onetrueos.com`. */
 export const instances = pgTable('instances', {
   id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
-  process_id: integer('process_id').notNull().references(() => process.id),
+  process_id: integer('process_id').references(() => process.id, { onDelete: 'cascade' }),
+  task_id: integer('task_id').references(() => task.id, { onDelete: 'cascade' }),
   image_id: integer('image_id').references(() => image.id),
   directory_checksum: text('directory_checksum').notNull(),
   state: instanceStateEnum('state').notNull().default('starting'),
@@ -136,11 +187,12 @@ export const instances = pgTable('instances', {
   created_at: timestamp('created_at').defaultNow().notNull(),
 }, (table) => [
   index('instances_process_id_idx').on(table.process_id),
+  index('instances_task_id_idx').on(table.task_id),
 ]);
 
+/** UI chrome for a process on a desk. Grouped via process → workspace. */
 export const workspaceWindow = pgTable('workspace_window', {
   id: serial('id').primaryKey(),
-  session_id: integer('session_id').notNull().references(() => sessions.id, { onDelete: 'cascade' }),
   process_id: integer('process_id').notNull().references(() => process.id, { onDelete: 'cascade' }),
   instance_id: integer('instance_id').notNull().references(() => instances.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
@@ -153,24 +205,17 @@ export const workspaceWindow = pgTable('workspace_window', {
   last_focused_at: timestamp('last_focused_at').defaultNow().notNull(),
   created_at: timestamp('created_at').defaultNow().notNull(),
 }, (table) => [
-  index('workspace_window_session_id_idx').on(table.session_id),
   index('workspace_window_process_id_idx').on(table.process_id),
 ]);
 
-export const sessions = pgTable('sessions', {
+export const workspaceLog = pgTable('workspace_log', {
   id: serial('id').primaryKey(),
-  user_id: text('user_id').notNull().references(() => user.id),
-  name: text("name"),
-});
-
-export const sessionLog = pgTable('session_log', {
-  id: serial('id').primaryKey(),
-  session_id: integer('session_id').notNull().references(() => sessions.id, { onDelete: 'cascade' }),
+  workspace_id: integer('workspace_id').notNull().references(() => workspace.id, { onDelete: 'cascade' }),
   level: text('level').notNull(),
   source: text('source').notNull(),
   message: text('message').notNull(),
   detail: text('detail'),
   created_at: timestamp('created_at').defaultNow().notNull(),
 }, (table) => [
-  index('session_log_session_id_idx').on(table.session_id),
+  index('workspace_log_workspace_id_idx').on(table.workspace_id),
 ])

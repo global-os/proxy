@@ -5,6 +5,7 @@ import { optionalNameSignUpPlugin } from './auth/plugins/optional-name-signup.js
 import { hashPassword, verifyPassword } from './crypto/password.js'
 import { db } from './db/index.js'
 import { seedFixturesForUser } from './db/seed.js'
+import { ensureGlobalPcForUser } from './services/global-pc.js'
 import * as schema from './db/schema.js'
 
 export const auth = betterAuth({
@@ -27,6 +28,8 @@ export const auth = betterAuth({
       create: {
         after: async (createdUser) => {
           try {
+            await ensureGlobalPcForUser(db, createdUser.id)
+
             const stats = await seedFixturesForUser(createdUser.id, createdUser.email)
             if (!stats) return
 

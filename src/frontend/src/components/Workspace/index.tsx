@@ -4,8 +4,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { WorkspaceProps } from './types'
 import { useWorkspace } from './useWorkspace'
 import { WorkspaceWindow } from './WorkspaceWindow'
-import { useSessionKernel } from '../../kernel/useSessionKernel'
-import { SessionLogger } from '../SessionLogger'
+import { useWorkspaceKernel } from '../../kernel/useWorkspaceKernel'
+import { WorkspaceLogger } from '../WorkspaceLogger'
+import {
+  iconsService,
+  installIconsConsoleApi,
+  type DesktopApiResponse,
+} from '../../services/icons-service'
 
 export type { WorkspaceActions } from './types'
 
@@ -14,6 +19,8 @@ type DesktopItem = {
   id: number
   name: string
   mime_type?: string
+  /** Zany icon id from gapp.json → Users/.local/icons/{icon}.bmp */
+  icon?: string
 }
 
 const isLaunchableApp = (item: DesktopItem) =>
@@ -61,22 +68,39 @@ const IconBox = createComponent(
   ['launchable', 'onClick']
 )
 
+const iconChrome = {
+  width: '48px',
+  height: '48px',
+  borderRadius: 0,
+  borderWidth: '2px',
+  borderStyle: 'solid',
+  borderTopColor: '#ffffff',
+  borderLeftColor: '#ffffff',
+  borderBottomColor: '#808080',
+  borderRightColor: '#808080',
+  boxShadow: '1px 1px 0 rgba(0,0,0,0.2)',
+  boxSizing: 'border-box' as const,
+}
+
 const IconShape = createComponent(
   (_props: { isDir?: boolean }) => ({
-    width: '48px',
-    height: '48px',
+    ...iconChrome,
     background: '#c0c0c0',
-    borderRadius: 0,
-    borderWidth: '2px',
-    borderStyle: 'solid',
-    borderTopColor: '#ffffff',
-    borderLeftColor: '#ffffff',
-    borderBottomColor: '#808080',
-    borderRightColor: '#808080',
-    boxShadow: '1px 1px 0 rgba(0,0,0,0.2)',
   }),
   'div',
   ['isDir']
+)
+
+const IconBitmap = createComponent(
+  () => ({
+    ...iconChrome,
+    display: 'block',
+    objectFit: 'contain',
+    imageRendering: 'pixelated',
+    background: '#080a12',
+  }),
+  'img',
+  ['src', 'alt']
 )
 
 const IconLabel = createComponent(
@@ -144,20 +168,37 @@ const serverWindowToAppWindow = (win: ServerWindow) => ({
   processId: win.processId,
 })
 
-export function Workspace({ sessionId, children }: WorkspaceProps) {
+export function Workspace({ workspaceId, children }: WorkspaceProps) {
   const { state, onMouseDown, onMouseUp, onMouseMove, actions } = useWorkspace(
     children.onStartup
   )
   const [launchMessage, setLaunchMessage] = useState<string | null>(null)
   const queryClient = useQueryClient()
-  const { syncWindow, iframeRef, releaseWindow } = useSessionKernel(sessionId)
 
-  const hydratedSession = useRef<string | null>(null)
-
-  const { data: sessionWindows } = useQuery<ServerWindow[]>({
-    queryKey: ['session-windows', sessionId],
+  const { data: desktopData } = useQuery<DesktopApiResponse>({
+    queryKey: ['desktop', workspaceId],
     queryFn: async () => {
-      const r = await fetch(`/api/sessions/${sessionId}/windows`, {
+      const r = await fetch(
+        `/api/fs/desktop?workspaceId=${encodeURIComponent(workspaceId)}`,
+        { credentials: 'include' },
+      )
+      if (!r.ok) return { globalPcId: 0, items: [] }
+      const body = (await r.json()) as DesktopApiResponse
+      if (body.globalPcId) {
+        await iconsService.load(workspaceId)
+      }
+      return body
+    },
+  })
+  const desktopItems = desktopData?.items ?? []
+  const { syncWindow, iframeRef, releaseWindow } = useWorkspaceKernel(workspaceId)
+
+  const hydratedWorkspace = useRef<string | null>(null)
+
+  const { data: workspaceWindows } = useQuery<ServerWindow[]>({
+    queryKey: ['workspace-windows', workspaceId],
+    queryFn: async () => {
+      const r = await fetch(`/api/workspaces/${workspaceId}/windows`, {
         credentials: 'include',
       })
       if (!r.ok) return []
@@ -166,14 +207,14 @@ export function Workspace({ sessionId, children }: WorkspaceProps) {
   })
 
   useEffect(() => {
-    hydratedSession.current = null
-  }, [sessionId])
+    hydratedWorkspace.current = null
+  }, [workspaceId])
 
   useEffect(() => {
-    if (!sessionWindows || hydratedSession.current === sessionId) return
-    hydratedSession.current = sessionId
-    actions.setWindows(sessionWindows.map(serverWindowToAppWindow))
-  }, [sessionId, sessionWindows, actions])
+    if (!workspaceWindows || hydratedWorkspace.current === workspaceId) return
+    hydratedWorkspace.current = workspaceId
+    actions.setWindows(workspaceWindows.map(serverWindowToAppWindow))
+  }, [workspaceId, workspaceWindows, actions])
 
   // Stable iframe refs read win from a ref map; sync each render so mount + trace see current metadata.
   for (const win of state.windows) {
@@ -190,29 +231,24 @@ export function Workspace({ sessionId, children }: WorkspaceProps) {
     openWindowIdsRef.current = openIds
   }, [state.windows, releaseWindow])
 
-  const { data: desktopItems = [] } = useQuery<DesktopItem[]>({
-    queryKey: ['desktop'],
-    queryFn: async () => {
-      const r = await fetch('/api/fs/desktop', { credentials: 'include' })
-      if (!r.ok) return []
-      return r.json()
-    },
-  })
+  useEffect(() => {
+    installIconsConsoleApi(() => workspaceId)
+  }, [workspaceId])
 
   useEffect(() => {
     const refreshDesktop = () => {
-      void queryClient.invalidateQueries({ queryKey: ['desktop'] })
+      void queryClient.invalidateQueries({ queryKey: ['desktop', workspaceId] })
     }
     window.addEventListener('globalos:desktop-updated', refreshDesktop)
     return () => window.removeEventListener('globalos:desktop-updated', refreshDesktop)
-  }, [queryClient])
+  }, [queryClient, workspaceId])
 
   const openProgram = useCallback(async (item: DesktopItem) => {
     if (!isLaunchableApp(item)) return
 
     setLaunchMessage(`Launching ${item.name}…`)
     try {
-      const r = await fetch(`/api/sessions/${sessionId}/launch`, {
+      const r = await fetch(`/api/workspaces/${workspaceId}/launch`, {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -249,25 +285,25 @@ export function Workspace({ sessionId, children }: WorkspaceProps) {
         actions.openWindow(appWindow)
       }
       setLaunchMessage(null)
-      void queryClient.invalidateQueries({ queryKey: ['session-logs', sessionId] })
+      void queryClient.invalidateQueries({ queryKey: ['workspace-logs', workspaceId] })
     } catch (err) {
       setLaunchMessage(err instanceof Error ? err.message : 'Launch failed')
     }
-  }, [actions, queryClient, sessionId])
+  }, [actions, queryClient, workspaceId])
 
   const closeWindow = useCallback(async (windowId: number) => {
     actions.closeWindow(windowId)
     try {
-      const r = await fetch(`/api/sessions/${sessionId}/windows/${windowId}`, {
+      const r = await fetch(`/api/workspaces/${workspaceId}/windows/${windowId}`, {
         method: 'DELETE',
         credentials: 'include',
       })
       if (!r.ok) return
-      await queryClient.invalidateQueries({ queryKey: ['session-windows', sessionId] })
+      await queryClient.invalidateQueries({ queryKey: ['workspace-windows', workspaceId] })
     } catch {
       // UI already updated; sync on next refresh
     }
-  }, [actions, queryClient, sessionId])
+  }, [actions, queryClient, workspaceId])
 
   return (
     <Frame
@@ -284,14 +320,16 @@ export function Workspace({ sessionId, children }: WorkspaceProps) {
               launchable={launchable}
               onClick={launchable ? () => void openProgram(item) : undefined}
             >
-              <IconShape isDir={item.type === 'directory'} />
+              {item.icon
+                ? <IconBitmap src={`/api/fs/icons/${item.icon}`} alt="" />
+                : <IconShape isDir={item.type === 'directory'} />}
               <IconLabel>{item.name}</IconLabel>
             </IconBox>
           )
         })}
       </IconGrid>
       {launchMessage && <LaunchStatus>{launchMessage}</LaunchStatus>}
-      <SessionLogger sessionId={sessionId} />
+      <WorkspaceLogger workspaceId={workspaceId} />
       {state.windows.map((win, i) => {
         const topZIndex = state.windows.reduce(
           (max, w) => Math.max(max, w.zIndex),

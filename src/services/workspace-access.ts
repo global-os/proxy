@@ -3,36 +3,32 @@ import { db } from '../db/index.js'
 import * as schema from '../db/schema.js'
 import { LaunchError } from './errors.js'
 
-export async function requireWorkspaceSession(userId: string, sessionId: number) {
+export async function requireWorkspace(userId: string, workspaceId: number) {
   const [row] = await db
-    .select({ id: schema.sessions.id })
-    .from(schema.sessions)
+    .select({ id: schema.workspace.id })
+    .from(schema.workspace)
     .where(and(
-      eq(schema.sessions.id, sessionId),
-      eq(schema.sessions.user_id, userId),
+      eq(schema.workspace.id, workspaceId),
+      eq(schema.workspace.user_id, userId),
     ))
     .limit(1)
 
   if (!row) {
-    throw new LaunchError('Workspace session not found', 404)
+    throw new LaunchError('Workspace not found', 404)
   }
 
   return row
 }
 
-export async function deleteWorkspaceSession(userId: string, sessionId: number): Promise<void> {
-  await requireWorkspaceSession(userId, sessionId)
+export async function deleteWorkspace(userId: string, workspaceId: number): Promise<void> {
+  await requireWorkspace(userId, workspaceId)
 
   const processes = await db
     .select({ id: schema.process.id })
     .from(schema.process)
-    .where(eq(schema.process.session_id, sessionId))
+    .where(eq(schema.process.workspace_id, workspaceId))
 
   const processIds = processes.map((row) => row.id)
-
-  await db
-    .delete(schema.workspaceWindow)
-    .where(eq(schema.workspaceWindow.session_id, sessionId))
 
   if (processIds.length > 0) {
     await db
@@ -40,14 +36,14 @@ export async function deleteWorkspaceSession(userId: string, sessionId: number):
       .where(inArray(schema.instances.process_id, processIds))
     await db
       .delete(schema.process)
-      .where(eq(schema.process.session_id, sessionId))
+      .where(eq(schema.process.workspace_id, workspaceId))
   }
 
   await db
-    .delete(schema.sessions)
+    .delete(schema.workspace)
     .where(and(
-      eq(schema.sessions.id, sessionId),
-      eq(schema.sessions.user_id, userId),
+      eq(schema.workspace.id, workspaceId),
+      eq(schema.workspace.user_id, userId),
     ))
 }
 

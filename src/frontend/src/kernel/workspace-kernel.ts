@@ -29,7 +29,7 @@ type PendingInbound = {
 const PENDING_MAX_PER_WINDOW = 32
 const PENDING_TTL_MS = 30_000
 
-export class SessionKernel {
+export class WorkspaceKernel {
   private readonly bindings = new Map<number, KernelWindowBinding>()
   /** Inbound messages received before the iframe binding exists, keyed by windowId. */
   private readonly pendingByWindowId = new Map<number, PendingInbound[]>()
@@ -37,15 +37,15 @@ export class SessionKernel {
   private readonly processState = new Map<number, Record<string, unknown>>()
   /** In-flight operation per process (e.g. which window is saving). */
   private readonly activeOps = new Map<number, ActiveOperation>()
-  /** Windows subscribed to session-wide kernel trace events. */
+  /** Windows subscribed to workspace-wide kernel trace events. */
   private readonly tracers = new Set<number>()
 
-  constructor(private readonly sessionId: string) {}
+  constructor(private readonly workspaceId: string) {}
 
   register(binding: KernelWindowBinding) {
     this.bindings.set(binding.windowId, binding)
     if (!this.processState.has(binding.processId)) {
-      const persisted = loadProcessState(this.sessionId, binding.processId)
+      const persisted = loadProcessState(this.workspaceId, binding.processId)
       if (persisted) this.processState.set(binding.processId, persisted)
     }
     this.drainPending(binding)
@@ -336,7 +336,7 @@ export class SessionKernel {
       await this.invokeSyscall('fs.saveDesktopFile', { filename, content })
 
       this.processState.set(binding.processId, state)
-      saveProcessState(this.sessionId, binding.processId, state)
+      saveProcessState(this.workspaceId, binding.processId, state)
       this.notifyDesktopUpdated()
       post({ type: 'save:complete', filename })
     } catch (err) {
@@ -351,7 +351,7 @@ export class SessionKernel {
     if (this.processState.has(processId)) {
       return this.processState.get(processId)!
     }
-    const persisted = loadProcessState(this.sessionId, processId)
+    const persisted = loadProcessState(this.workspaceId, processId)
     if (persisted) {
       this.processState.set(processId, persisted)
     }

@@ -196,7 +196,7 @@ export async function createImage(
   let compiledFiles = files
   if (hasSquintSource) {
     if (!opts?.compile) {
-      throw new Error('Squint app build requires a session compile context')
+      throw new Error('Squint app build requires a workspace compile context')
     }
     compiledFiles = await compileGappTree(dirName, files, {
       ...opts.compile,

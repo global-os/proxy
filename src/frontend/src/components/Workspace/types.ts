@@ -109,7 +109,7 @@ export type WorkspaceActions = {
 }
 
 export type WorkspaceProps = {
-  sessionId: string
+  workspaceId: string
   children: {
     onStartup?: (actions: WorkspaceActions) => void
   }

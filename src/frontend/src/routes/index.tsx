@@ -14,7 +14,7 @@ function Index() {
 
   useEffect(() => {
     if (!isPending && !error && userId !== undefined) {
-      navigate({ to: '/sessions' })
+      navigate({ to: '/workspaces' })
     }
   }, [isPending, error, userId, navigate])
 

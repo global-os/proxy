@@ -4,9 +4,9 @@ import { VerticalFrame } from '../components/VerticalFrame'
 import { Page } from '../components/Page'
 import { PageTitle } from '../components/PageTitle'
 import { signOut } from '../lib/auth-client'
-import { SessionList } from '../components/SessionList'
+import { WorkspaceList } from '../components/WorkspaceList'
 
-export const Route = createFileRoute('/sessions')({
+export const Route = createFileRoute('/workspaces')({
   component: RouteComponent,
 })
 
@@ -30,8 +30,8 @@ function RouteComponent() {
   return (
     <Page>
       <VerticalFrame width="38em">
-        <PageTitle>Sessions</PageTitle>
-        <SessionList onLogOut={handleLogOut} isLoggingOut={isLoggingOut} />
+        <PageTitle>Workspaces</PageTitle>
+        <WorkspaceList onLogOut={handleLogOut} isLoggingOut={isLoggingOut} />
       </VerticalFrame>
     </Page>
   )

@@ -1,0 +1,6 @@
+{
+  "name": "filebrowser",
+  "icon": "gem",
+  "entry": "index.html",
+  "type": "module"
+}

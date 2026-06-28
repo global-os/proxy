@@ -1,9 +1,9 @@
 import { Hono } from 'hono'
 import * as middleware from '../middleware.js'
 import { LaunchError, launchProgram } from '../services/launch-program.js'
-import { requireWorkspaceSession } from '../services/session-access.js'
-import { clearSessionLogs, listSessionLogs } from '../services/session-logger.js'
-import { deleteWindow, listSessionWindows } from '../services/window-service.js'
+import { requireWorkspace } from '../services/workspace-access.js'
+import { clearWorkspaceLogs, listWorkspaceLogs } from '../services/workspace-logger.js'
+import { deleteWindow, listWorkspaceWindows } from '../services/window-service.js'
 import { Env } from '../types.js'
 
 const router = new Hono<Env>()
@@ -15,62 +15,62 @@ router.use(
   middleware.betterAuthMiddleware,
 )
 
-router.get('/sessions/:sessionId/logs', async (c) => {
+router.get('/workspaces/:workspaceId/logs', async (c) => {
   const user = c.get('user')
   if (!user) return c.json({ message: 'Unauthorized' }, 401)
 
-  const sessionId = Number.parseInt(c.req.param('sessionId'), 10)
-  if (!Number.isFinite(sessionId)) {
-    return c.json({ message: 'Invalid session id' }, 400)
+  const workspaceId = Number.parseInt(c.req.param('workspaceId'), 10)
+  if (!Number.isFinite(workspaceId)) {
+    return c.json({ message: 'Invalid workspace id' }, 400)
   }
 
   try {
-    await requireWorkspaceSession(user.id, sessionId)
-    const logs = await listSessionLogs(sessionId)
+    await requireWorkspace(user.id, workspaceId)
+    const logs = await listWorkspaceLogs(workspaceId)
     return c.json(logs)
   } catch (err) {
     if (err instanceof LaunchError) {
       return c.json({ message: err.message }, err.status as 404)
     }
-    console.error('[session-logs]', err)
-    return c.json({ message: 'Failed to load session logs' }, 500)
+    console.error('[workspace-logs]', err)
+    return c.json({ message: 'Failed to load workspace logs' }, 500)
   }
 })
 
-router.delete('/sessions/:sessionId/logs', async (c) => {
+router.delete('/workspaces/:workspaceId/logs', async (c) => {
   const user = c.get('user')
   if (!user) return c.json({ message: 'Unauthorized' }, 401)
 
-  const sessionId = Number.parseInt(c.req.param('sessionId'), 10)
-  if (!Number.isFinite(sessionId)) {
-    return c.json({ message: 'Invalid session id' }, 400)
+  const workspaceId = Number.parseInt(c.req.param('workspaceId'), 10)
+  if (!Number.isFinite(workspaceId)) {
+    return c.json({ message: 'Invalid workspace id' }, 400)
   }
 
   try {
-    await requireWorkspaceSession(user.id, sessionId)
-    await clearSessionLogs(sessionId)
+    await requireWorkspace(user.id, workspaceId)
+    await clearWorkspaceLogs(workspaceId)
     return c.json({ ok: true })
   } catch (err) {
     if (err instanceof LaunchError) {
       return c.json({ message: err.message }, err.status as 404)
     }
-    console.error('[session-logs]', err)
-    return c.json({ message: 'Failed to clear session logs' }, 500)
+    console.error('[workspace-logs]', err)
+    return c.json({ message: 'Failed to clear workspace logs' }, 500)
   }
 })
 
-router.get('/sessions/:sessionId/windows', async (c) => {
+router.get('/workspaces/:workspaceId/windows', async (c) => {
   const user = c.get('user')
   if (!user) return c.json({ message: 'Unauthorized' }, 401)
 
-  const sessionId = Number.parseInt(c.req.param('sessionId'), 10)
-  if (!Number.isFinite(sessionId)) {
-    return c.json({ message: 'Invalid session id' }, 400)
+  const workspaceId = Number.parseInt(c.req.param('workspaceId'), 10)
+  if (!Number.isFinite(workspaceId)) {
+    return c.json({ message: 'Invalid workspace id' }, 400)
   }
 
   try {
-    await requireWorkspaceSession(user.id, sessionId)
-    const windows = await listSessionWindows(sessionId)
+    await requireWorkspace(user.id, workspaceId)
+    const windows = await listWorkspaceWindows(workspaceId)
     return c.json(windows)
   } catch (err) {
     if (err instanceof LaunchError) {
@@ -81,19 +81,19 @@ router.get('/sessions/:sessionId/windows', async (c) => {
   }
 })
 
-router.delete('/sessions/:sessionId/windows/:windowId', async (c) => {
+router.delete('/workspaces/:workspaceId/windows/:windowId', async (c) => {
   const user = c.get('user')
   if (!user) return c.json({ message: 'Unauthorized' }, 401)
 
-  const sessionId = Number.parseInt(c.req.param('sessionId'), 10)
+  const workspaceId = Number.parseInt(c.req.param('workspaceId'), 10)
   const windowId = Number.parseInt(c.req.param('windowId'), 10)
-  if (!Number.isFinite(sessionId) || !Number.isFinite(windowId)) {
-    return c.json({ message: 'Invalid session or window id' }, 400)
+  if (!Number.isFinite(workspaceId) || !Number.isFinite(windowId)) {
+    return c.json({ message: 'Invalid workspace or window id' }, 400)
   }
 
   try {
-    await requireWorkspaceSession(user.id, sessionId)
-    const removed = await deleteWindow(sessionId, windowId)
+    await requireWorkspace(user.id, workspaceId)
+    const removed = await deleteWindow(workspaceId, windowId)
     if (!removed) return c.json({ message: 'Window not found' }, 404)
     return c.json({ ok: true })
   } catch (err) {
@@ -105,13 +105,13 @@ router.delete('/sessions/:sessionId/windows/:windowId', async (c) => {
   }
 })
 
-router.post('/sessions/:sessionId/launch', async (c) => {
+router.post('/workspaces/:workspaceId/launch', async (c) => {
   const user = c.get('user')
   if (!user) return c.json({ message: 'Unauthorized' }, 401)
 
-  const sessionId = Number.parseInt(c.req.param('sessionId'), 10)
-  if (!Number.isFinite(sessionId)) {
-    return c.json({ message: 'Invalid session id' }, 400)
+  const workspaceId = Number.parseInt(c.req.param('workspaceId'), 10)
+  if (!Number.isFinite(workspaceId)) {
+    return c.json({ message: 'Invalid workspace id' }, 400)
   }
 
   let body: { directoryId?: number; directoryName?: string }
@@ -129,7 +129,7 @@ router.post('/sessions/:sessionId/launch', async (c) => {
   try {
     const result = await launchProgram({
       userId: user.id,
-      sessionId,
+      workspaceId,
       directoryId,
       directoryName: body.directoryName ?? 'app',
     })

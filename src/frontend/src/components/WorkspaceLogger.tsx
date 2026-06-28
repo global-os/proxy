@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createComponent } from 'react-fela'
 
-type SessionLogEntry = {
+type WorkspaceLogEntry = {
   id: number
   level: 'info' | 'warn' | 'error'
   source: string
@@ -120,13 +120,13 @@ function formatTime(iso: string) {
   }
 }
 
-export function SessionLogger({ sessionId }: { sessionId: string }) {
+export function WorkspaceLogger({ workspaceId }: { workspaceId: string }) {
   const queryClient = useQueryClient()
 
-  const { data: logs = [] } = useQuery<SessionLogEntry[]>({
-    queryKey: ['session-logs', sessionId],
+  const { data: logs = [] } = useQuery<WorkspaceLogEntry[]>({
+    queryKey: ['workspace-logs', workspaceId],
     queryFn: async () => {
-      const r = await fetch(`/api/sessions/${sessionId}/logs`, {
+      const r = await fetch(`/api/workspaces/${workspaceId}/logs`, {
         credentials: 'include',
       })
       if (!r.ok) return []
@@ -137,25 +137,25 @@ export function SessionLogger({ sessionId }: { sessionId: string }) {
 
   const clearLogs = useMutation({
     mutationFn: async () => {
-      const r = await fetch(`/api/sessions/${sessionId}/logs`, {
+      const r = await fetch(`/api/workspaces/${workspaceId}/logs`, {
         method: 'DELETE',
         credentials: 'include',
       })
       if (!r.ok) {
         const body = (await r.json().catch(() => null)) as { message?: string } | null
-        throw new Error(body?.message ?? 'Failed to clear session log')
+        throw new Error(body?.message ?? 'Failed to clear workspace log')
       }
     },
     onSuccess: () => {
-      queryClient.setQueryData(['session-logs', sessionId], [])
-      void queryClient.invalidateQueries({ queryKey: ['session-logs', sessionId] })
+      queryClient.setQueryData(['workspace-logs', workspaceId], [])
+      void queryClient.invalidateQueries({ queryKey: ['workspace-logs', workspaceId] })
     },
   })
 
   return (
     <Panel>
       <Header>
-        <span>Session log</span>
+        <span>Workspace log</span>
         <ClearButton
           type="button"
           disabled={logs.length === 0 || clearLogs.isPending}

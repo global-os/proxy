@@ -7,7 +7,7 @@ import { upgradeLegacySlug } from './create-instance.js'
 
 export type WorkspaceWindowDto = {
   id: number
-  sessionId: number
+  workspaceId: number
   processId: number
   instanceId: number
   instanceSlug: string
@@ -23,7 +23,7 @@ export type WorkspaceWindowDto = {
 
 type WindowJoinedRow = {
   id: number
-  session_id: number
+  workspace_id: number
   process_id: number
   instance_id: number
   instance_slug: string
@@ -55,7 +55,7 @@ async function resolveWindowRows(rows: WindowJoinedRow[]): Promise<WindowJoinedR
 function toDto(row: WindowJoinedRow): WorkspaceWindowDto {
   return {
     id: row.id,
-    sessionId: row.session_id,
+    workspaceId: row.workspace_id,
     processId: row.process_id,
     instanceId: row.instance_id,
     instanceSlug: row.instance_slug,
@@ -74,7 +74,7 @@ function windowQuery() {
   return db
     .select({
       id: schema.workspaceWindow.id,
-      session_id: schema.workspaceWindow.session_id,
+      workspace_id: schema.process.workspace_id,
       process_id: schema.workspaceWindow.process_id,
       instance_id: schema.workspaceWindow.instance_id,
       instance_slug: schema.instances.slug,
@@ -87,24 +87,25 @@ function windowQuery() {
       z_index: schema.workspaceWindow.z_index,
     })
     .from(schema.workspaceWindow)
+    .innerJoin(schema.process, eq(schema.workspaceWindow.process_id, schema.process.id))
     .innerJoin(schema.instances, eq(schema.workspaceWindow.instance_id, schema.instances.id))
 }
 
-export async function listSessionWindows(sessionId: number): Promise<WorkspaceWindowDto[]> {
+export async function listWorkspaceWindows(workspaceId: number): Promise<WorkspaceWindowDto[]> {
   const rows = await windowQuery()
-    .where(eq(schema.workspaceWindow.session_id, sessionId))
+    .where(eq(schema.process.workspace_id, workspaceId))
     .orderBy(schema.workspaceWindow.z_index)
 
   return (await resolveWindowRows(rows)).map(toDto)
 }
 
 export async function listProcessWindows(
-  sessionId: number,
+  workspaceId: number,
   processId: number,
 ): Promise<WorkspaceWindowDto[]> {
   const rows = await windowQuery()
     .where(and(
-      eq(schema.workspaceWindow.session_id, sessionId),
+      eq(schema.process.workspace_id, workspaceId),
       eq(schema.workspaceWindow.process_id, processId),
     ))
     .orderBy(desc(schema.workspaceWindow.z_index))
@@ -112,17 +113,18 @@ export async function listProcessWindows(
   return (await resolveWindowRows(rows)).map(toDto)
 }
 
-async function nextZIndex(sessionId: number): Promise<number> {
+async function nextZIndex(workspaceId: number): Promise<number> {
   const [row] = await db
     .select({ max: sql<number>`coalesce(max(${schema.workspaceWindow.z_index}), 0)` })
     .from(schema.workspaceWindow)
-    .where(eq(schema.workspaceWindow.session_id, sessionId))
+    .innerJoin(schema.process, eq(schema.workspaceWindow.process_id, schema.process.id))
+    .where(eq(schema.process.workspace_id, workspaceId))
 
   return (row?.max ?? 0) + 1
 }
 
 export async function createWindow(opts: {
-  sessionId: number
+  workspaceId: number
   processId: number
   instanceId: number
   instanceSlug: string
@@ -133,11 +135,10 @@ export async function createWindow(opts: {
   width?: number
   height?: number
 }): Promise<WorkspaceWindowDto> {
-  const zIndex = await nextZIndex(opts.sessionId)
+  const zIndex = await nextZIndex(opts.workspaceId)
   const [row] = await db
     .insert(schema.workspaceWindow)
     .values({
-      session_id: opts.sessionId,
       process_id: opts.processId,
       instance_id: opts.instanceId,
       title: opts.title,
@@ -153,7 +154,7 @@ export async function createWindow(opts: {
 
   return toDto({
     id: row.id,
-    session_id: opts.sessionId,
+    workspace_id: opts.workspaceId,
     process_id: opts.processId,
     instance_id: opts.instanceId,
     instance_slug: opts.instanceSlug,
@@ -167,18 +168,18 @@ export async function createWindow(opts: {
   })
 }
 
-export async function focusWindow(sessionId: number, windowId: number): Promise<WorkspaceWindowDto | null> {
-  const zIndex = await nextZIndex(sessionId)
+export async function focusWindow(
+  workspaceId: number,
+  windowId: number,
+): Promise<WorkspaceWindowDto | null> {
+  const zIndex = await nextZIndex(workspaceId)
   const [updated] = await db
     .update(schema.workspaceWindow)
     .set({
       z_index: zIndex,
       last_focused_at: new Date(),
     })
-    .where(and(
-      eq(schema.workspaceWindow.id, windowId),
-      eq(schema.workspaceWindow.session_id, sessionId),
-    ))
+    .where(eq(schema.workspaceWindow.id, windowId))
     .returning({ id: schema.workspaceWindow.id })
 
   if (!updated) return null
@@ -186,7 +187,7 @@ export async function focusWindow(sessionId: number, windowId: number): Promise<
   const [row] = await windowQuery()
     .where(and(
       eq(schema.workspaceWindow.id, windowId),
-      eq(schema.workspaceWindow.session_id, sessionId),
+      eq(schema.process.workspace_id, workspaceId),
     ))
     .limit(1)
 
@@ -196,25 +197,39 @@ export async function focusWindow(sessionId: number, windowId: number): Promise<
 }
 
 export async function deleteWindow(
-  sessionId: number,
+  workspaceId: number,
   windowId: number,
 ): Promise<boolean> {
   const [deleted] = await db
     .delete(schema.workspaceWindow)
-    .where(and(
-      eq(schema.workspaceWindow.id, windowId),
-      eq(schema.workspaceWindow.session_id, sessionId),
-    ))
-    .returning({ id: schema.workspaceWindow.id })
+    .where(eq(schema.workspaceWindow.id, windowId))
+    .returning({ id: schema.workspaceWindow.id, process_id: schema.workspaceWindow.process_id })
 
-  return !!deleted
+  if (!deleted) return false
+
+  const [proc] = await db
+    .select({ workspace_id: schema.process.workspace_id })
+    .from(schema.process)
+    .where(eq(schema.process.id, deleted.process_id))
+    .limit(1)
+
+  return proc?.workspace_id === workspaceId
 }
 
 export async function updateWindowGeometry(
-  sessionId: number,
+  workspaceId: number,
   windowId: number,
   patch: { x?: number; y?: number; width?: number; height?: number },
 ): Promise<void> {
+  const [row] = await windowQuery()
+    .where(and(
+      eq(schema.workspaceWindow.id, windowId),
+      eq(schema.process.workspace_id, workspaceId),
+    ))
+    .limit(1)
+
+  if (!row) return
+
   await db
     .update(schema.workspaceWindow)
     .set({
@@ -223,8 +238,5 @@ export async function updateWindowGeometry(
       ...(patch.width !== undefined ? { width: patch.width } : {}),
       ...(patch.height !== undefined ? { height: patch.height } : {}),
     })
-    .where(and(
-      eq(schema.workspaceWindow.id, windowId),
-      eq(schema.workspaceWindow.session_id, sessionId),
-    ))
+    .where(eq(schema.workspaceWindow.id, windowId))
 }

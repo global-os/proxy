@@ -4,6 +4,9 @@ import * as middleware from '../middleware.js'
 import { Env } from '../types.js'
 import * as schema from '../db/schema.js'
 import { resolveDesktopDirectoryId } from '../services/desktop-files.js'
+import { resolveDesktopEntryIcon } from '../services/global-pc-icons.js'
+import { ensureGlobalPcForUser, resolveGlobalPcIdForWorkspace } from '../services/global-pc.js'
+import { readLocalIconBmp } from '../services/local-icons.js'
 
 const router = new Hono<Env>()
 
@@ -20,8 +23,24 @@ router.get('/desktop', async (c) => {
   if (!user) return c.json({ error: 'Unauthorized' }, 401)
 
   const db = c.get('db')
+  const workspaceIdRaw = c.req.query('workspaceId')
+  let globalPcId: number
+  if (workspaceIdRaw) {
+    const workspaceId = Number.parseInt(workspaceIdRaw, 10)
+    if (!Number.isFinite(workspaceId)) {
+      return c.json({ error: 'Invalid workspaceId' }, 400)
+    }
+    try {
+      globalPcId = await resolveGlobalPcIdForWorkspace(db, user.id, workspaceId)
+    } catch {
+      return c.json({ error: 'Workspace not found' }, 404)
+    }
+  } else {
+    globalPcId = await ensureGlobalPcForUser(db, user.id)
+  }
+
   const desktopId = await resolveDesktopDirectoryId(db, user.id)
-  if (!desktopId) return c.json([])
+  if (!desktopId) return c.json({ globalPcId, items: [] })
 
   const [dirs, files] = await Promise.all([
     db.select({ id: schema.directory.id, name: schema.directory.name })
@@ -32,10 +51,40 @@ router.get('/desktop', async (c) => {
       .where(eq(schema.file.parent_id, desktopId)),
   ])
 
-  return c.json([
-    ...dirs.map(d => ({ type: 'directory' as const, id: d.id, name: d.name })),
-    ...files.map(f => ({ type: 'file' as const, id: f.id, name: f.name, mime_type: f.mime_type })),
-  ])
+  const desktopDirs = await Promise.all(dirs.map(async (d) => {
+    const icon = d.name.endsWith('.gapp')
+      ? await resolveDesktopEntryIcon(db, globalPcId, d.id, d.name)
+      : undefined
+    return {
+      type: 'directory' as const,
+      id: d.id,
+      name: d.name,
+      ...(icon ? { icon } : {}),
+    }
+  }))
+
+  return c.json({
+    globalPcId,
+    items: [
+      ...desktopDirs,
+      ...files.map(f => ({ type: 'file' as const, id: f.id, name: f.name, mime_type: f.mime_type })),
+    ],
+  })
+})
+
+router.get('/icons/:iconId', async (c) => {
+  const user = c.get('user')
+  if (!user) return c.json({ error: 'Unauthorized' }, 401)
+
+  const iconId = c.req.param('iconId').replace(/\.bmp$/i, '')
+  const db = c.get('db')
+  const bmp = await readLocalIconBmp(db, user.id, iconId)
+  if (!bmp) return c.notFound()
+
+  return c.body(new Uint8Array(bmp), 200, {
+    'Content-Type': 'image/bmp',
+    'Cache-Control': 'private, max-age=3600',
+  })
 })
 
 export default router

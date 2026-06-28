@@ -202,6 +202,7 @@ function mimeFor(ext: string): string {
     '.svg': 'image/svg+xml',
     '.txt': 'text/plain',
     '.cljs': 'text/plain',
+    '.bmp': 'image/bmp',
   }
   return map[ext.toLowerCase()] ?? 'application/octet-stream'
 }

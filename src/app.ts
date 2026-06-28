@@ -16,9 +16,11 @@ import { pathFromHostnameAndPath } from './utils.js'
 import { auth } from './auth.js'
 import authRoutes from './routes/auth.js'
 import fsRoutes from './routes/fs.js'
+import globalPcRoutes from './routes/global-pc.js'
 import syscallsRoutes from './routes/syscalls.js'
 import programsRoutes from './routes/programs.js'
 import adminRoutes from './routes/admin.js'
+import { ensureGlobalPcForUser } from './services/global-pc.js'
 import { scheduleInstancePrepare } from './runtime/instance-background.js'
 import { ensureInstanceReady, touchInstance } from './runtime/instance-manager.js'
 import { INSTANCE_MIME, isInstanceContentCached, resolveCachedInstanceFile } from './runtime/instance-content.js'
@@ -33,7 +35,7 @@ import { benchmarkScrypt } from './crypto/password.js'
 import { checkAppTables, checkAuthTables, pingDatabase, pingPool, pool, probeDrizzleUserLookup, probeUserLookup } from './db/index.js'
 import { checkConfig, checkFrontendBundle, probeAuthHandler } from './health-checks.js'
 import { LaunchError } from './services/errors.js'
-import { deleteWorkspaceSession } from './services/session-access.js'
+import { deleteWorkspace } from './services/workspace-access.js'
 
 const app = new Hono<Env>({
   getPath(request, options) {
@@ -246,7 +248,7 @@ app.use(
 )
 
 app.use(
-  '/app/api/sessions',
+  '/app/api/workspaces',
   middleware.provideDb,
   middleware.parseCookies,
   middleware.betterAuthMiddleware,
@@ -254,35 +256,28 @@ app.use(
 )
 
 app.basePath('/app/api/fs').route('/', fsRoutes)
+app.basePath('/app/api/global-pc').route('/', globalPcRoutes)
 app.basePath('/app/api/syscalls').route('/', syscallsRoutes)
 app.basePath('/app/api/admin').route('/', adminRoutes)
 app.basePath('/app/api').route('/', programsRoutes)
 
-app.get('/app/api/sessions', async (c) => {
-  console.log('=== GET /app/api/sessions ===')
+app.get('/app/api/workspaces', async (c) => {
   const db = c.get('db')
   const user = c.get('user')
-
-  console.log('db:', !!db)
-  console.log('user:', !!user, user?.id)
 
   if (!user) {
     return Response.json([])
   }
 
-  console.log('get rows')
-
   const rows = await db
     .select()
-    .from(schema.sessions)
-    .where(eq(schema.sessions.user_id, user.id))
-
-  console.log('get rows: ', rows)
+    .from(schema.workspace)
+    .where(eq(schema.workspace.user_id, user.id))
 
   return Response.json(rows)
 })
 
-app.post('/app/api/sessions', async (c) => {
+app.post('/app/api/workspaces', async (c) => {
   const db = c.get('db')
   const user = c.get('user')
 
@@ -290,37 +285,40 @@ app.post('/app/api/sessions', async (c) => {
     return c.json({ message: 'Unauthorized' }, 401)
   }
 
-  await db.insert(schema.sessions).values({
+  const globalPcId = await ensureGlobalPcForUser(db, user.id)
+
+  await db.insert(schema.workspace).values({
     user_id: user.id,
+    global_pc_id: globalPcId,
     name: 'bar',
   })
 
   const rows = await db
     .select()
-    .from(schema.sessions)
-    .where(eq(schema.sessions.user_id, user.id))
+    .from(schema.workspace)
+    .where(eq(schema.workspace.user_id, user.id))
 
   return c.json(rows)
 })
 
-app.delete('/app/api/sessions/:sessionId', async (c) => {
+app.delete('/app/api/workspaces/:workspaceId', async (c) => {
   const user = c.get('user')
   if (!user) return c.json({ message: 'Unauthorized' }, 401)
 
-  const sessionId = Number.parseInt(c.req.param('sessionId'), 10)
-  if (!Number.isFinite(sessionId)) {
-    return c.json({ message: 'Invalid session id' }, 400)
+  const workspaceId = Number.parseInt(c.req.param('workspaceId'), 10)
+  if (!Number.isFinite(workspaceId)) {
+    return c.json({ message: 'Invalid workspace id' }, 400)
   }
 
   try {
-    await deleteWorkspaceSession(user.id, sessionId)
+    await deleteWorkspace(user.id, workspaceId)
     return c.json({ ok: true })
   } catch (err) {
     if (err instanceof LaunchError) {
       return c.json({ message: err.message }, err.status as 404)
     }
-    console.error('[sessions] delete failed:', err)
-    return c.json({ message: 'Failed to delete session' }, 500)
+    console.error('[workspaces] delete failed:', err)
+    return c.json({ message: 'Failed to delete workspace' }, 500)
   }
 })
 

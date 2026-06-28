@@ -183,7 +183,16 @@ export async function checkAppTables(
   timeoutMs = 5_000,
 ): Promise<
   PingResult & {
-    tables?: { verification: boolean; instances: boolean; workspace_window: boolean }
+    tables?: {
+      verification: boolean
+      instances: boolean
+      workspace_window: boolean
+      global_pc: boolean
+      global_pc_icon: boolean
+      task: boolean
+      workspace: boolean
+      workspace_log: boolean
+    }
   }
 > {
   if (!isDatabaseConfigured()) {
@@ -193,17 +202,40 @@ export async function checkAppTables(
   const start = Date.now()
   try {
     const result = await withTimeout(
-      pool.query<{ verification: boolean; instances: boolean; workspace_window: boolean }>(
+      pool.query<{
+        verification: boolean
+        instances: boolean
+        workspace_window: boolean
+        global_pc: boolean
+        global_pc_icon: boolean
+        task: boolean
+        workspace: boolean
+        workspace_log: boolean
+      }>(
         `SELECT
           to_regclass('public.verification') IS NOT NULL AS verification,
           to_regclass('public.instances') IS NOT NULL AS instances,
-          to_regclass('public.workspace_window') IS NOT NULL AS "workspace_window"`
+          to_regclass('public.workspace_window') IS NOT NULL AS "workspace_window",
+          to_regclass('public.global_pc') IS NOT NULL AS global_pc,
+          to_regclass('public.global_pc_icon') IS NOT NULL AS global_pc_icon,
+          to_regclass('public.task') IS NOT NULL AS task,
+          to_regclass('public.workspace') IS NOT NULL AS workspace,
+          to_regclass('public.workspace_log') IS NOT NULL AS workspace_log`
       ),
       timeoutMs,
       'App table check'
     )
     const tables = result.rows[0]
-    const ok = Boolean(tables?.verification && tables?.instances && tables?.workspace_window)
+    const ok = Boolean(
+      tables?.verification
+      && tables?.instances
+      && tables?.workspace_window
+      && tables?.global_pc
+      && tables?.global_pc_icon
+      && tables?.task
+      && tables?.workspace
+      && tables?.workspace_log
+    )
     if (!ok) {
       return {
         ok: false,

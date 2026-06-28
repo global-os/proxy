@@ -9,12 +9,12 @@ const meta: Meta = {
 export default meta
 
 export const Empty: StoryObj = {
-  render: () => <Workspace sessionId="1">{{ onStartup: () => {} }}</Workspace>,
+  render: () => <Workspace workspaceId="1">{{ onStartup: () => {} }}</Workspace>,
 }
 
 export const WithWindows: StoryObj = {
   render: () => (
-    <Workspace sessionId="1">
+    <Workspace workspaceId="1">
       {{
         onStartup: (actions) => {
           actions.openWindow({

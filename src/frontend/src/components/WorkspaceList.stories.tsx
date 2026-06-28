@@ -1,26 +1,26 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { SessionList } from './SessionList'
+import { WorkspaceList } from './WorkspaceList'
 
-const meta: Meta = { component: SessionList, title: 'SessionList' }
+const meta: Meta = { component: WorkspaceList, title: 'WorkspaceList' }
 export default meta
 
-const SESSIONS = [
-  { id: 1, name: 'My Work Session', user_id: 'user-1' },
+const WORKSPACES = [
+  { id: 1, name: 'Design desk', user_id: 'user-1' },
   { id: 2, user_id: 'user-1' },
   { id: 3, name: 'Experiment', user_id: 'user-1' },
 ]
 
 function seededClient(data: unknown) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  client.setQueryData(['sessions'], data)
+  client.setQueryData(['workspaces'], data)
   return client
 }
 
-export const WithSessions: StoryObj = {
+export const WithWorkspaces: StoryObj = {
   decorators: [
     (Story) => (
-      <QueryClientProvider client={seededClient(SESSIONS)}>
+      <QueryClientProvider client={seededClient(WORKSPACES)}>
         <Story />
       </QueryClientProvider>
     ),

@@ -17,6 +17,8 @@ export type GappDependencySpec = {
 export type GappManifest = {
   name?: string
   version?: string
+  /** Icon basename (without .bmp) under Users/.local/icons/ */
+  icon?: string
   entry?: string
   type?: 'classic' | 'module'
   compile?: {

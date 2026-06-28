@@ -1,0 +1,142 @@
+[
+  {
+    "name": "disco-ball",
+    "file": "disco-ball.bmp",
+    "size": 16
+  },
+  {
+    "name": "taco",
+    "file": "taco.bmp",
+    "size": 16
+  },
+  {
+    "name": "ufo",
+    "file": "ufo.bmp",
+    "size": 16
+  },
+  {
+    "name": "lightning",
+    "file": "lightning.bmp",
+    "size": 16
+  },
+  {
+    "name": "rainbow",
+    "file": "rainbow.bmp",
+    "size": 16
+  },
+  {
+    "name": "skull",
+    "file": "skull.bmp",
+    "size": 16
+  },
+  {
+    "name": "rocket",
+    "file": "rocket.bmp",
+    "size": 16
+  },
+  {
+    "name": "pizza",
+    "file": "pizza.bmp",
+    "size": 16
+  },
+  {
+    "name": "ghost",
+    "file": "ghost.bmp",
+    "size": 16
+  },
+  {
+    "name": "alien",
+    "file": "alien.bmp",
+    "size": 16
+  },
+  {
+    "name": "flame",
+    "file": "flame.bmp",
+    "size": 16
+  },
+  {
+    "name": "star",
+    "file": "star.bmp",
+    "size": 16
+  },
+  {
+    "name": "heart",
+    "file": "heart.bmp",
+    "size": 16
+  },
+  {
+    "name": "mushroom",
+    "file": "mushroom.bmp",
+    "size": 16
+  },
+  {
+    "name": "robot",
+    "file": "robot.bmp",
+    "size": 16
+  },
+  {
+    "name": "frog",
+    "file": "frog.bmp",
+    "size": 16
+  },
+  {
+    "name": "eye",
+    "file": "eye.bmp",
+    "size": 16
+  },
+  {
+    "name": "gem",
+    "file": "gem.bmp",
+    "size": 16
+  },
+  {
+    "name": "bomb",
+    "file": "bomb.bmp",
+    "size": 16
+  },
+  {
+    "name": "donut",
+    "file": "donut.bmp",
+    "size": 16
+  },
+  {
+    "name": "crown",
+    "file": "crown.bmp",
+    "size": 16
+  },
+  {
+    "name": "wizard",
+    "file": "wizard.bmp",
+    "size": 16
+  },
+  {
+    "name": "banana",
+    "file": "banana.bmp",
+    "size": 16
+  },
+  {
+    "name": "watermelon",
+    "file": "watermelon.bmp",
+    "size": 16
+  },
+  {
+    "name": "hotdog",
+    "file": "hotdog.bmp",
+    "size": 16
+  },
+  {
+    "name": "pretzel",
+    "file": "pretzel.bmp",
+    "size": 16
+  },
+  {
+    "name": "cat",
+    "file": "cat.bmp",
+    "size": 16
+  },
+  {
+    "name": "sparkle",
+    "file": "sparkle.bmp",
+    "size": 16
+  }
+]

@@ -16,16 +16,22 @@ Production URL: `https://app.app.onetrueos.com`
 
 ## Core concepts
 
+**Canonical architecture:** [`docs/architecture.md`](docs/architecture.md)
+
+```text
+Global PC
+  ├── Task(s) — PC-scoped services (not in a workspace); process ≠ task
+  └── Workspace(s) — persistent desk; runs many processes
+        └── Process (per .gapp on that desk)
+              ├── Window(s) — UI chrome; cannot exist without a process
+              └── Instance(s) — runtime at {slug}.app.onetrueos.com
 ```
-Session (workspace)
-  └── Process (1 per session + .gapp directory)
-        └── Instance(s) (runtime; public subdomain = instances.slug UUID)
-              └── workspace_window (UI chrome: position, title, iframe src)
-```
+
+Legacy code still uses `sessions` / `sessionId` for **workspaces**; auth **session** is separate (Better Auth).
 
 - **Launch** (`POST /api/sessions/:sessionId/launch`): validate session + `.gapp`, find/create process + instance, open or focus window. Must return quickly.
 - **Instance serve** (`*.app.onetrueos.com`): `ensureInstanceReady` resolves image metadata, loads `tar_bytes`, extracts to `/tmp`, serves files from memory map.
-- **Session kernel** (`src/frontend/src/kernel/`): parent-page `postMessage` bridge; opaque JSON state per `sessionId:processId` in `localStorage`. App-agnostic — no per-app handlers in the kernel (see **`.gapp` paradigm** below).
+- **Workspace kernel** (`src/frontend/src/kernel/`, still named session-kernel): parent-page `postMessage` bridge during a **visit**; opaque JSON state per `workspaceId:processId` (process) or `globalPcId:taskId` (task) in `localStorage`. App-agnostic — no per-app handlers in the kernel (see **`.gapp` paradigm** below).
 - **Syscalls** (`src/syscalls/`, `POST /api/syscalls`): platform operations (filesystem, etc.) invoked by the kernel on behalf of iframe apps.
 
 ## `.gapp` paradigm
@@ -62,7 +68,7 @@ Apps **must** use `window.parent.postMessage` to request platform services. The 
 | `fs:browse`, `fs:mkdir`, `fs:rename`, `fs:delete` | Shorthand → same syscalls; reply `fs:*:complete` / `fs:*:error` |
 | `die:response` | Reserved for window close handshake |
 
-**Opaque process state:** On successful `save`, kernel stores the message payload (minus `type`) in memory and `localStorage` under `sessionId:processId`. Schema is **owned by the app**; kernel does not interpret fields beyond `filename` / `content` for the save syscall.
+**Opaque process state:** On successful `save`, kernel stores the message payload (minus `type`) in memory and `localStorage` under `workspaceId:processId` (legacy key may still use `sessionId`). Schema is **owned by the app**; kernel does not interpret fields beyond `filename` / `content` for the save syscall.
 
 **Desktop refresh:** After mutating FS syscalls, kernel dispatches `globalos:desktop-updated` so the workspace reloads desktop icons.
 

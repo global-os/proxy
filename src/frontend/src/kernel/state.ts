@@ -1,15 +1,15 @@
 const PREFIX = 'globalos:process-state'
 
-export function stateKey(sessionId: string, processId: number): string {
-  return `${PREFIX}:${sessionId}:${processId}`
+export function stateKey(workspaceId: string, processId: number): string {
+  return `${PREFIX}:${workspaceId}:${processId}`
 }
 
 /** undefined = no saved state, null = corrupt blob */
 export function loadProcessState(
-  sessionId: string,
+  workspaceId: string,
   processId: number,
 ): Record<string, unknown> | null | undefined {
-  const raw = localStorage.getItem(stateKey(sessionId, processId))
+  const raw = localStorage.getItem(stateKey(workspaceId, processId))
   if (!raw) return undefined
   try {
     const parsed: unknown = JSON.parse(raw)
@@ -21,9 +21,9 @@ export function loadProcessState(
 }
 
 export function saveProcessState(
-  sessionId: string,
+  workspaceId: string,
   processId: number,
   state: Record<string, unknown>,
 ): void {
-  localStorage.setItem(stateKey(sessionId, processId), JSON.stringify(state))
+  localStorage.setItem(stateKey(workspaceId, processId), JSON.stringify(state))
 }

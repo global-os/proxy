@@ -3,7 +3,7 @@ export type KernelMessage = {
 } & Record<string, unknown>
 
 export type KernelWindowContext = {
-  sessionId: string
+  workspaceId: string
   windowId: number
   processId: number
   instanceId: number

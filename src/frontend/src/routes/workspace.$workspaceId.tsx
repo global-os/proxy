@@ -4,21 +4,21 @@ import { Page } from '../components/Page'
 import { Workspace } from '../components/Workspace'
 import { useSession } from '../lib/auth-client'
 
-export const Route = createFileRoute('/session/$sessionId')({
+export const Route = createFileRoute('/workspace/$workspaceId')({
   component: RouteComponent,
 })
 
 function RouteComponent() {
-  const { sessionId } = Route.useParams()
+  const { workspaceId } = Route.useParams()
   const navigate = useNavigate()
-  const { data: session, isPending, error, isRefetching, refetch } = useSession()
+  const { data: authSession, isPending, error, isRefetching, refetch } = useSession()
 
   useEffect(() => {
     if (isPending || isRefetching || error) return
-    if (!session?.user) {
+    if (!authSession?.user) {
       navigate({ to: '/login' })
     }
-  }, [isPending, isRefetching, error, session?.user, navigate])
+  }, [isPending, isRefetching, error, authSession?.user, navigate])
 
   useEffect(() => {
     if (!error) return
@@ -48,13 +48,13 @@ function RouteComponent() {
     )
   }
 
-  if (!session?.user) {
+  if (!authSession?.user) {
     return null
   }
 
   return (
     <Page variant="workspace">
-      <Workspace sessionId={sessionId}>{{}}</Workspace>
+      <Workspace workspaceId={workspaceId}>{{}}</Workspace>
     </Page>
   )
 }
