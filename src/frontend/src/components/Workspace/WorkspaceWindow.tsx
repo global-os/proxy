@@ -194,29 +194,76 @@ const ContentFrame = createComponent(() => ({
   ...insetBorder,
 }), 'div', ['data-window-index', 'onMouseDown'])
 
-const ResizeHandle = createComponent(
-  ({
-    cursor,
-    side,
-  }: {
-    cursor: string
-    side: 'left' | 'right'
-  }) => ({
-    position: 'absolute',
-    width: '22px',
-    height: '22px',
-    bottom: '-8px',
-    left: side === 'left' ? '-8px' : undefined,
-    right: side === 'right' ? '-8px' : undefined,
-    cursor,
-    zIndex: 2,
-    background: 'rgba(255, 235, 59, 0.45)',
-    boxSizing: 'border-box',
-    border: '1px solid rgba(218, 165, 32, 0.55)',
-  }),
-  'div',
-  ['data-window-index', 'data-resize-handle', 'onMouseDown']
-)
+const gripSegment = {
+  background: '#c0c0c0',
+  boxSizing: 'border-box',
+  ...outsetBorder,
+}
+
+const GripVerticalWest = createComponent(() => ({
+  ...gripSegment,
+  gridColumn: 1,
+  gridRow: '1 / 3',
+  width: '6px',
+}))
+
+const GripHorizontalWest = createComponent(() => ({
+  ...gripSegment,
+  gridColumn: 2,
+  gridRow: 2,
+  width: '8px',
+  height: '6px',
+  alignSelf: 'end',
+}))
+
+const GripVerticalEast = createComponent(() => ({
+  ...gripSegment,
+  gridColumn: 2,
+  gridRow: '1 / 3',
+  width: '6px',
+}))
+
+const GripHorizontalEast = createComponent(() => ({
+  ...gripSegment,
+  gridColumn: 1,
+  gridRow: 2,
+  width: '8px',
+  height: '6px',
+  alignSelf: 'end',
+  justifySelf: 'end',
+}))
+
+const ResizeHandleSouthWest = createComponent(() => ({
+  position: 'absolute',
+  bottom: '-8px',
+  left: '-8px',
+  width: '22px',
+  height: '22px',
+  display: 'grid',
+  gridTemplateColumns: '6px 8px',
+  gridTemplateRows: '6px 6px',
+  alignContent: 'end',
+  justifyContent: 'start',
+  cursor: 'nesw-resize',
+  zIndex: 2,
+  boxSizing: 'border-box',
+}), 'div', ['data-window-index', 'data-resize-handle', 'onMouseDown'])
+
+const ResizeHandleSouthEast = createComponent(() => ({
+  position: 'absolute',
+  bottom: '-8px',
+  right: '-8px',
+  width: '22px',
+  height: '22px',
+  display: 'grid',
+  gridTemplateColumns: '8px 6px',
+  gridTemplateRows: '6px 6px',
+  alignContent: 'end',
+  justifyContent: 'end',
+  cursor: 'nwse-resize',
+  zIndex: 2,
+  boxSizing: 'border-box',
+}), 'div', ['data-window-index', 'data-resize-handle', 'onMouseDown'])
 
 const StyledIframe = createComponent(
   ({ dragging, frontmost }: { dragging: boolean; frontmost: boolean }) => ({
@@ -306,20 +353,22 @@ export function WorkspaceWindow({
           innerRef={onIframeRef}
         />
       </ContentFrame>
-      <ResizeHandle
-        cursor="nesw-resize"
-        side="left"
+      <ResizeHandleSouthWest
         data-window-index={windowIndex}
         data-resize-handle="bottom-left"
         onMouseDown={onMouseDown}
-      />
-      <ResizeHandle
-        cursor="nwse-resize"
-        side="right"
+      >
+        <GripVerticalWest />
+        <GripHorizontalWest />
+      </ResizeHandleSouthWest>
+      <ResizeHandleSouthEast
         data-window-index={windowIndex}
         data-resize-handle="bottom-right"
         onMouseDown={onMouseDown}
-      />
+      >
+        <GripVerticalEast />
+        <GripHorizontalEast />
+      </ResizeHandleSouthEast>
     </Chrome>
   )
 }
