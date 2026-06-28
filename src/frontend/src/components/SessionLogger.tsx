@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createComponent } from 'react-fela'
 
 type SessionLogEntry = {
@@ -34,6 +34,10 @@ const Panel = createComponent(
 
 const Header = createComponent(
   () => ({
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '8px',
     padding: '8px 10px',
     borderBottom: '1px solid rgba(255,255,255,0.08)',
     fontWeight: 600,
@@ -42,6 +46,30 @@ const Header = createComponent(
     color: '#a8a8b3',
   }),
   'div'
+)
+
+const ClearButton = createComponent(
+  ({ disabled }: { disabled?: boolean }) => ({
+    flex: '0 0 auto',
+    padding: '2px 8px',
+    borderRadius: '4px',
+    border: '1px solid rgba(255,255,255,0.14)',
+    background: 'rgba(255,255,255,0.06)',
+    color: '#c8c8d0',
+    font: 'inherit',
+    fontSize: '10px',
+    fontWeight: 500,
+    letterSpacing: '0.02em',
+    textTransform: 'none',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    opacity: disabled ? 0.45 : 1,
+    ':hover': disabled ? undefined : {
+      background: 'rgba(255,255,255,0.1)',
+      color: '#e8e8ec',
+    },
+  }),
+  'button',
+  ['disabled']
 )
 
 const List = createComponent(
@@ -93,6 +121,8 @@ function formatTime(iso: string) {
 }
 
 export function SessionLogger({ sessionId }: { sessionId: string }) {
+  const queryClient = useQueryClient()
+
   const { data: logs = [] } = useQuery<SessionLogEntry[]>({
     queryKey: ['session-logs', sessionId],
     queryFn: async () => {
@@ -105,9 +135,34 @@ export function SessionLogger({ sessionId }: { sessionId: string }) {
     refetchInterval: 2000,
   })
 
+  const clearLogs = useMutation({
+    mutationFn: async () => {
+      const r = await fetch(`/api/sessions/${sessionId}/logs`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      if (!r.ok) {
+        const body = (await r.json().catch(() => null)) as { message?: string } | null
+        throw new Error(body?.message ?? 'Failed to clear session log')
+      }
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['session-logs', sessionId] })
+    },
+  })
+
   return (
     <Panel>
-      <Header>Session log</Header>
+      <Header>
+        <span>Session log</span>
+        <ClearButton
+          type="button"
+          disabled={logs.length === 0 || clearLogs.isPending}
+          onClick={() => void clearLogs.mutate()}
+        >
+          {clearLogs.isPending ? 'Clearing…' : 'Clear'}
+        </ClearButton>
+      </Header>
       <List>
         {logs.length === 0 ? (
           <Row level="info">

@@ -1,12 +1,13 @@
 import { execFileSync } from 'node:child_process'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { FIXTURE_EMAIL, resolveFixturePath } from './fixture-path.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const out = path.join(
-  root,
-  'fixtures/by-user/peterson@sent.com/~/Desktop/helloworld.gapp/yjs.js',
-)
+const out = resolveFixturePath(FIXTURE_EMAIL, '~/Desktop/helloworld.gapp/yjs.js')
+if (!out) {
+  throw new Error('helloworld.gapp fixture not found under fixtures/by-user/*/ or user dir')
+}
 
 execFileSync(
   'npx',

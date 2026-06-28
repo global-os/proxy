@@ -1,10 +1,13 @@
 import fs from 'fs'
 import path from 'path'
 import { and, eq, isNull } from 'drizzle-orm'
+import {
+  fixtureBasesForUser,
+  fixtureWildcardDir,
+  FIXTURE_WILDCARD,
+} from './fixture-paths.js'
 import { db } from './index.js'
 import { user, directory, file } from './schema.js'
-
-const FIXTURE_EMAIL = 'peterson@sent.com'
 
 type SyncStats = {
   directoriesCreated: number
@@ -12,39 +15,67 @@ type SyncStats = {
   filesUpdated: number
 }
 
+function hasFixtureSourcesOnDisk(): boolean {
+  if (fs.existsSync(fixtureWildcardDir())) return true
+
+  const byUserRoot = path.resolve(process.cwd(), 'fixtures/by-user')
+  if (!fs.existsSync(byUserRoot)) return false
+
+  return fs
+    .readdirSync(byUserRoot, { withFileTypes: true })
+    .some((entry) => entry.isDirectory() && entry.name !== FIXTURE_WILDCARD)
+}
+
 export async function seedUserFixtures() {
-  const [userRow] = await db.select({ id: user.id }).from(user).where(eq(user.email, FIXTURE_EMAIL))
-  if (!userRow) {
-    console.log(`Seed: ${FIXTURE_EMAIL} not found, skipping`)
+  if (!hasFixtureSourcesOnDisk()) {
+    console.log('Seed: no fixture sources on disk, skipping')
     return
   }
 
-  const fixtureBase = path.resolve(process.cwd(), 'fixtures/by-user', FIXTURE_EMAIL)
-  if (!fs.existsSync(fixtureBase)) {
-    console.log(`Seed: no fixtures at ${fixtureBase}, skipping`)
+  const users = await db
+    .select({ id: user.id, email: user.email })
+    .from(user)
+
+  if (users.length === 0) {
+    console.log('Seed: no users in database, skipping')
     return
   }
 
-  const stats: SyncStats = {
-    directoriesCreated: 0,
-    filesCreated: 0,
-    filesUpdated: 0,
+  let seededUsers = 0
+
+  for (const userRow of users) {
+    const fixtureBases = fixtureBasesForUser(userRow.email)
+    if (fixtureBases.length === 0) continue
+
+    const stats: SyncStats = {
+      directoriesCreated: 0,
+      filesCreated: 0,
+      filesUpdated: 0,
+    }
+
+    for (const fixtureBase of fixtureBases) {
+      await syncWalk(fixtureBase, null, userRow.id, stats)
+    }
+
+    seededUsers += 1
+    const changes =
+      stats.directoriesCreated + stats.filesCreated + stats.filesUpdated
+
+    if (changes === 0) {
+      console.log(`Seed: fixtures already up to date for ${userRow.email}`)
+      continue
+    }
+
+    console.log(
+      `Seed: synced fixtures for ${userRow.email} `
+      + `(+${stats.directoriesCreated} dirs, +${stats.filesCreated} files, `
+      + `~${stats.filesUpdated} updated)`,
+    )
   }
 
-  await syncWalk(fixtureBase, null, userRow.id, stats)
-
-  const changes =
-    stats.directoriesCreated + stats.filesCreated + stats.filesUpdated
-  if (changes === 0) {
-    console.log(`Seed: fixtures already up to date for ${FIXTURE_EMAIL}`)
-    return
+  if (seededUsers === 0) {
+    console.log('Seed: no matching users for fixture sources, skipping')
   }
-
-  console.log(
-    `Seed: synced fixtures for ${FIXTURE_EMAIL} `
-    + `(+${stats.directoriesCreated} dirs, +${stats.filesCreated} files, `
-    + `~${stats.filesUpdated} updated)`,
-  )
 }
 
 async function syncWalk(

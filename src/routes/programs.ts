@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import * as middleware from '../middleware.js'
 import { LaunchError, launchProgram } from '../services/launch-program.js'
 import { requireWorkspaceSession } from '../services/session-access.js'
-import { listSessionLogs } from '../services/session-logger.js'
+import { clearSessionLogs, listSessionLogs } from '../services/session-logger.js'
 import { deleteWindow, listSessionWindows } from '../services/window-service.js'
 import { Env } from '../types.js'
 
@@ -34,6 +34,28 @@ router.get('/sessions/:sessionId/logs', async (c) => {
     }
     console.error('[session-logs]', err)
     return c.json({ message: 'Failed to load session logs' }, 500)
+  }
+})
+
+router.delete('/sessions/:sessionId/logs', async (c) => {
+  const user = c.get('user')
+  if (!user) return c.json({ message: 'Unauthorized' }, 401)
+
+  const sessionId = Number.parseInt(c.req.param('sessionId'), 10)
+  if (!Number.isFinite(sessionId)) {
+    return c.json({ message: 'Invalid session id' }, 400)
+  }
+
+  try {
+    await requireWorkspaceSession(user.id, sessionId)
+    await clearSessionLogs(sessionId)
+    return c.json({ ok: true })
+  } catch (err) {
+    if (err instanceof LaunchError) {
+      return c.json({ message: err.message }, err.status as 404)
+    }
+    console.error('[session-logs]', err)
+    return c.json({ message: 'Failed to clear session logs' }, 500)
   }
 })
 

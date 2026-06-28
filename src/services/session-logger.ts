@@ -51,6 +51,10 @@ export function createSessionLogWriter(sessionId: number): SessionLogWriter {
   }
 }
 
+export async function clearSessionLogs(sessionId: number): Promise<void> {
+  await db.delete(sessionLog).where(eq(sessionLog.session_id, sessionId))
+}
+
 export async function listSessionLogs(
   sessionId: number,
   limit = 100,

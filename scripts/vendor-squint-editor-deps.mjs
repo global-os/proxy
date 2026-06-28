@@ -1,12 +1,13 @@
 import { execFileSync } from 'node:child_process'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { FIXTURE_EMAIL, resolveFixturePath } from './fixture-path.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const gappDir = path.join(
-  root,
-  'fixtures/by-user/peterson@sent.com/~/Desktop/squint-editor.gapp',
-)
+const gappDir = resolveFixturePath(FIXTURE_EMAIL, '~/Desktop/squint-editor.gapp')
+if (!gappDir) {
+  throw new Error('squint-editor.gapp fixture not found under fixtures/by-user/*/ or user dir')
+}
 
 const bundles = [
   {
