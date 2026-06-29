@@ -110,18 +110,82 @@ function instanceStateCls(state: WorkspaceProcess['instances'][number]['state'])
   }
 }
 
+function ProcessRow({ proc, workspaceId }: { proc: WorkspaceProcess; workspaceId: number }) {
+  const queryClient = useQueryClient()
+  const [killing, setKilling] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleKill = async () => {
+    setKilling(true)
+    setError(null)
+    try {
+      await killWorkspaceProcess(workspaceId, proc.id)
+      await queryClient.invalidateQueries({ queryKey: ['workspace-processes', workspaceId] })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to kill process')
+    } finally {
+      setKilling(false)
+    }
+  }
+
+  return (
+    <li className="px-4 py-3 flex flex-col gap-2">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="m-0 text-sm font-medium text-gray-900 truncate">{proc.bundleName}</p>
+          <p className="m-0 mt-0.5 text-xs text-gray-400">
+            Process {proc.id} · {proc.windowCount} window{proc.windowCount === 1 ? '' : 's'}
+          </p>
+        </div>
+        <button
+          type="button"
+          disabled={killing}
+          onClick={() => void handleKill()}
+          className={cn(
+            'shrink-0 inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors duration-100',
+            killing
+              ? 'bg-gray-50 border-gray-200 text-gray-300 cursor-default'
+              : 'bg-white border-red-200 text-red-600 cursor-pointer hover:bg-red-50 hover:border-red-300',
+          )}
+        >
+          {killing ? 'Killing…' : 'Kill'}
+        </button>
+      </div>
+      {error && (
+        <p role="alert" className="m-0 text-xs text-red-600">{error}</p>
+      )}
+      {proc.instances.length === 0 ? (
+        <p className="m-0 text-xs text-gray-400">No instances</p>
+      ) : (
+        <ul className="m-0 p-0 list-none flex flex-col gap-1.5">
+          {proc.instances.map((inst) => (
+            <li
+              key={inst.id}
+              className="flex items-center justify-between gap-2 text-xs text-gray-600"
+            >
+              <span className="font-mono truncate">{inst.slug}</span>
+              <span
+                className={cn(
+                  'shrink-0 px-2 py-0.5 rounded-full border text-[11px] font-medium capitalize',
+                  instanceStateCls(inst.state),
+                )}
+              >
+                {instanceStateLabel(inst.state)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </li>
+  )
+}
+
 function WorkspaceProcessPanel({
   workspaceId,
   expanded,
-  killingProcessId,
-  killError,
-  onKill,
 }: {
   workspaceId: number
   expanded: boolean
-  killingProcessId: number | null
-  killError: string | null
-  onKill: (processId: number) => void
 }) {
   const { data, isPending, error } = useQuery<WorkspaceProcess[]>({
     queryKey: ['workspace-processes', workspaceId],
@@ -159,58 +223,9 @@ function WorkspaceProcessPanel({
 
   return (
     <div className="border-t border-gray-200 bg-white/60">
-      {killError && (
-        <p role="alert" className="m-0 px-4 py-2 text-xs text-red-600 border-b border-red-100">
-          {killError}
-        </p>
-      )}
       <ul className="m-0 p-0 list-none divide-y divide-gray-100">
         {processes.map((proc) => (
-          <li key={proc.id} className="px-4 py-3 flex flex-col gap-2">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="m-0 text-sm font-medium text-gray-900 truncate">{proc.bundleName}</p>
-                <p className="m-0 mt-0.5 text-xs text-gray-400">
-                  Process {proc.id} · {proc.windowCount} window{proc.windowCount === 1 ? '' : 's'}
-                </p>
-              </div>
-              <button
-                type="button"
-                disabled={killingProcessId === proc.id}
-                onClick={() => onKill(proc.id)}
-                className={cn(
-                  'shrink-0 inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors duration-100',
-                  killingProcessId === proc.id
-                    ? 'bg-gray-50 border-gray-200 text-gray-300 cursor-default'
-                    : 'bg-white border-red-200 text-red-600 cursor-pointer hover:bg-red-50 hover:border-red-300',
-                )}
-              >
-                {killingProcessId === proc.id ? 'Killing…' : 'Kill'}
-              </button>
-            </div>
-            {proc.instances.length === 0 ? (
-              <p className="m-0 text-xs text-gray-400">No instances</p>
-            ) : (
-              <ul className="m-0 p-0 list-none flex flex-col gap-1.5">
-                {proc.instances.map((inst) => (
-                  <li
-                    key={inst.id}
-                    className="flex items-center justify-between gap-2 text-xs text-gray-600"
-                  >
-                    <span className="font-mono truncate">{inst.slug}</span>
-                    <span
-                      className={cn(
-                        'shrink-0 px-2 py-0.5 rounded-full border text-[11px] font-medium capitalize',
-                        instanceStateCls(inst.state),
-                      )}
-                    >
-                      {instanceStateLabel(inst.state)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </li>
+          <ProcessRow key={proc.id} proc={proc} workspaceId={workspaceId} />
         ))}
       </ul>
     </div>
@@ -222,17 +237,11 @@ function WorkspaceManageCard({
   index,
   expanded,
   onToggle,
-  killingProcessId,
-  killError,
-  onKill,
 }: {
   ws: Workspace
   index: number
   expanded: boolean
   onToggle: () => void
-  killingProcessId: number | null
-  killError: string | null
-  onKill: (processId: number) => void
 }) {
   const label = workspaceLabel(ws, index)
 
@@ -274,9 +283,6 @@ function WorkspaceManageCard({
       <WorkspaceProcessPanel
         workspaceId={ws.id}
         expanded={expanded}
-        killingProcessId={killingProcessId}
-        killError={killError}
-        onKill={onKill}
       />
     </div>
   )
@@ -331,8 +337,6 @@ export const WorkspaceList = ({ onLogOut, isLoggingOut }: WorkspaceListProps) =>
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [expandedManageIds, setExpandedManageIds] = useState<Set<number>>(() => new Set())
-  const [killingProcessId, setKillingProcessId] = useState<number | null>(null)
-  const [killError, setKillError] = useState<string | null>(null)
   const { data: authSession } = useSession()
   const isAdmin = authSession?.user?.email === 'peterson@sent.com'
 
@@ -373,19 +377,6 @@ export const WorkspaceList = ({ onLogOut, isLoggingOut }: WorkspaceListProps) =>
       return next
     })
   }, [])
-
-  const handleKillProcess = useCallback(async (workspaceId: number, processId: number) => {
-    setKillError(null)
-    setKillingProcessId(processId)
-    try {
-      await killWorkspaceProcess(workspaceId, processId)
-      await queryClient.invalidateQueries({ queryKey: ['workspace-processes', workspaceId] })
-    } catch (err) {
-      setKillError(err instanceof Error ? err.message : 'Failed to kill process')
-    } finally {
-      setKillingProcessId(null)
-    }
-  }, [queryClient])
 
   const handleDeleteWorkspace = useCallback(async (workspaceId: number) => {
     setDeleteError(null)
@@ -450,9 +441,6 @@ export const WorkspaceList = ({ onLogOut, isLoggingOut }: WorkspaceListProps) =>
                   index={i}
                   expanded={expandedManageIds.has(ws.id)}
                   onToggle={() => toggleManage(ws.id)}
-                  killingProcessId={killingProcessId}
-                  killError={killError}
-                  onKill={(processId) => void handleKillProcess(ws.id, processId)}
                 />
               ))
             )}
