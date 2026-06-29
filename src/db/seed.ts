@@ -169,6 +169,7 @@ async function ensureFile(
       hash_method: 'sha1',
       parent_id: parentId,
       user_id: userId,
+      is_stock: true,
     })
     stats.filesCreated += 1
     return
@@ -182,7 +183,7 @@ async function ensureFile(
 
   await db
     .update(file)
-    .set({ content, mime_type })
+    .set({ content, mime_type, is_stock: true, updated_at: new Date() })
     .where(eq(file.id, existing.id))
 
   stats.filesUpdated += 1

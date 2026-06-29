@@ -79,7 +79,7 @@ export async function upsertDesktopFile(
   if (existing) {
     await db
       .update(schema.file)
-      .set({ content: bytes, mime_type })
+      .set({ content: bytes, mime_type, is_stock: false, updated_at: new Date() })
       .where(eq(schema.file.id, existing.id))
 
     return { id: existing.id, name, created: false }

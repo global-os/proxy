@@ -242,13 +242,13 @@ export const fsRename: SyscallHandler = async ({ db, userId }, args) => {
       }
 
       await assertNameAvailable(db, dir.parent_id!, name, id)
-      await db.update(schema.directory).set({ name }).where(eq(schema.directory.id, id))
+      await db.update(schema.directory).set({ name, updated_at: new Date() }).where(eq(schema.directory.id, id))
       return { ok: true, result: { id, name } }
     }
 
     const row = await getFile(db, userId, id)
     await assertNameAvailable(db, row.parent_id, name, undefined, id)
-    await db.update(schema.file).set({ name }).where(eq(schema.file.id, id))
+    await db.update(schema.file).set({ name, updated_at: new Date() }).where(eq(schema.file.id, id))
     return { ok: true, result: { id, name } }
   } catch (err) {
     return fail(err)

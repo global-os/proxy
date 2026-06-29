@@ -87,6 +87,8 @@ export const directory = pgTable('directory', {
   name: text('name').notNull(),
   parent_id: integer('parent_id').references((): any => directory.id),
   user_id: text('user_id').references(() => user.id),
+  created_at: timestamp('created_at').defaultNow().notNull(),
+  updated_at: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => [
   index('directory_parent_id_idx').on(table.parent_id),
   index('directory_user_id_idx').on(table.user_id),
@@ -100,6 +102,9 @@ export const file = pgTable('file', {
   hash_method: text('hash_method').notNull(),
   parent_id: integer('parent_id').notNull().references(() => directory.id),
   user_id: text('user_id').references(() => user.id),
+  created_at: timestamp('created_at').defaultNow().notNull(),
+  updated_at: timestamp('updated_at').defaultNow().notNull(),
+  is_stock: boolean('is_stock').default(false).notNull(),
 }, (table) => [
   index('file_parent_id_idx').on(table.parent_id),
   index('file_user_id_idx').on(table.user_id),
