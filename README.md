@@ -172,6 +172,20 @@ TanStack Router — regenerate after adding routes:
 cd src/frontend && npm run regenerate
 ```
 
+### Database shell
+
+Add this alias to `~/.zshrc` to open a `psql` session against the project database:
+
+```bash
+alias proxy-db='env $(grep -v "^#" /path/to/PROXY/.env | xargs) psql "$DATABASE_URL" "sslmode=require"'
+```
+
+Then run:
+
+```bash
+proxy-db
+```
+
 ### Storybook (admin only)
 
 Component stories live in `src/frontend/src/**/*.stories.tsx`.

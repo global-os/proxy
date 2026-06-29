@@ -87,8 +87,10 @@
       SAVE_TIMEOUT_MS)))
 
 (defn save! []
+  (js/console.log "save! called, state:" (clj->js @state))
   (when-not (:saving @state)
     (let [name (.trim (.-value $filename))]
+      (js/console.log "save! name:" name "content length:" (.-length (get-content)))
       (if (zero? (.-length name))
         (status! "Filename required" true)
         (do
@@ -97,6 +99,7 @@
           (render!)
           (status! "" false)
           (schedule-save-timeout!)
+          (js/console.log "save! posting to kernel")
           (post! #js {:type "save"
                       :filename name
                       :content (get-content)}))))))
