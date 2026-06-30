@@ -41,6 +41,7 @@ export function instanceLoadingPage(): string {
       var statusEl = document.getElementById('status')
       var errorEl = document.getElementById('error')
       var pollMs = 500
+      var stopped = false
 
       function setMessage(message, error) {
         if (statusEl) statusEl.textContent = message || 'Preparing app…'
@@ -56,6 +57,7 @@ export function instanceLoadingPage(): string {
       }
 
       async function poll() {
+        if (stopped) return
         try {
           var res = await fetch('/_status', { credentials: 'include' })
           if (!res.ok) {
@@ -69,6 +71,7 @@ export function instanceLoadingPage(): string {
             return
           }
           if (data.stage === 'failed') {
+            stopped = true
             setMessage(data.message || 'Failed to start app', data.error || 'Unknown error')
             return
           }
