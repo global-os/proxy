@@ -4,6 +4,7 @@ var errorMsg = document.getElementById('error-msg')
 var frame = document.getElementById('webview-frame')
 
 function showError(msg) {
+  console.error('[twitter.gapp] error:', msg)
   if (loadingMsg) loadingMsg.style.display = 'none'
   if (errorMsg) { errorMsg.textContent = msg; errorMsg.style.display = 'block' }
 }
@@ -20,11 +21,14 @@ window.addEventListener('message', function(event) {
   var data = event.data
   if (!data || typeof data.type !== 'string') return
 
+  console.log('[twitter.gapp] received message:', data.type, data)
+
   if (data.type === 'init:fresh' || data.type === 'init') {
     if (data.type === 'init' && data.proxyOrigin) {
       showFrame(data.proxyOrigin)
       return
     }
+    console.log('[twitter.gapp] sending webview:create')
     window.parent.postMessage({ type: 'webview:create', requestId: 'wv1', domain: 'x.com' }, '*')
     return
   }
@@ -48,4 +52,5 @@ window.addEventListener('message', function(event) {
   }
 })
 
+console.log('[twitter.gapp] loaded, sending ready')
 window.parent.postMessage({ type: 'ready' }, '*')

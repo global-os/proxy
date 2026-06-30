@@ -385,8 +385,10 @@ export class WorkspaceKernel {
         domain: string
         proxyOrigin: string
       }>('/api/webviews', 'POST', { processId: binding.processId, domain })
+      console.log('[kernel] webview:create succeeded:', result)
       post({ type: 'webview:create:complete', ...replyBase, ...result })
     } catch (err) {
+      console.error('[kernel] webview:create failed:', err)
       post({
         type: 'webview:create:error',
         ...replyBase,
