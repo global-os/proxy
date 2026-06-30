@@ -21,6 +21,16 @@ function extractCrossDomain(upstreamPath: string): { domain: string; rest: strin
   return { domain: m[1]!, rest: m[2] || '/' }
 }
 
+// Headers that must not be forwarded to the upstream.
+const HOP_BY_HOP = new Set([
+  'connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization',
+  'te', 'trailers', 'transfer-encoding', 'upgrade',
+  // Set to the upstream host by the fetch() call itself.
+  'host',
+  // Proxy-domain cookies are meaningless to the upstream.
+  'cookie',
+])
+
 /**
  * Rewrite Set-Cookie so the browser accepts it under the proxy origin.
  * Replace the upstream domain with the proxy host and downgrade SameSite=None.
@@ -89,15 +99,16 @@ XMLHttpRequest.prototype.open=function(m,u){
 }
 
 function rewriteHtml(html: string, boundDomain: string): string {
-  const withAttrs = rewriteHtmlAttrs(html, boundDomain)
+  let result = rewriteHtmlAttrs(html, boundDomain)
+  // Strip <meta http-equiv="Content-Security-Policy"> tags — they would block
+  // our injected inline script the same way HTTP CSP headers do.
+  result = result.replace(/<meta[^>]+http-equiv\s*=\s*["']?content-security-policy["']?[^>]*>/gi, '')
   const intercept = buildInterceptScript()
-  // Inject before the first <script> or at the end of <head>, whichever comes first.
-  const injected = withAttrs.replace(/(<head[^>]*>)/i, `$1${intercept}`)
-  // If there's no <head>, fall back to injecting before the first <script>.
-  if (injected === withAttrs) {
-    return withAttrs.replace(/(<script[\s>])/i, `${intercept}$1`)
-  }
-  return injected
+  // Inject as the first child of <head> so it runs before any site scripts.
+  const injected = result.replace(/(<head[^>]*>)/i, `$1${intercept}`)
+  if (injected !== result) return injected
+  // No <head> tag — inject before the first <script>.
+  return result.replace(/(<script[\s>])/i, `${intercept}$1`)
 }
 
 export async function proxyWebviewRequest(
@@ -113,20 +124,23 @@ export async function proxyWebviewRequest(
   const upstream = `https://${fetchDomain}${fetchPath}`
 
   const forwardHeaders = new Headers()
-  for (const h of ['accept', 'accept-language', 'accept-encoding', 'cache-control', 'if-none-match', 'if-modified-since']) {
-    const v = incomingRequest.headers.get(h)
-    if (v) forwardHeaders.set(h, v)
+  for (const [key, value] of incomingRequest.headers.entries()) {
+    if (!HOP_BY_HOP.has(key.toLowerCase())) forwardHeaders.set(key, value)
   }
   forwardHeaders.set(
     'User-Agent',
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
   )
 
+  const method = incomingRequest.method.toUpperCase()
+  const body = method !== 'GET' && method !== 'HEAD' ? incomingRequest.body : null
+
   let upstreamResponse: Response
   try {
     upstreamResponse = await fetch(upstream, {
       method: incomingRequest.method,
       headers: forwardHeaders,
+      body,
       redirect: 'follow',
     })
   } catch (err) {
