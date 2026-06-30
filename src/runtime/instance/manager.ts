@@ -95,19 +95,6 @@ async function loadInstanceReady(instanceId: number): Promise<boolean> {
     return false
   }
 
-  if (await isBundleCached(instanceId, row.directory_checksum)) {
-    await touchInstance(instanceId)
-    if (row.state !== 'running') {
-      await persistInstanceReady(instanceId)
-    }
-    setInstancePrepareReady(instanceId)
-    return true
-  }
-
-  if (await isBundleCached(instanceId)) {
-    await evictBundleCache(instanceId)
-  }
-
   if (row.process_id == null) {
     setInstancePrepareFailed(instanceId, 'Instance has no process')
     return false
@@ -133,6 +120,8 @@ async function loadInstanceReady(instanceId: number): Promise<boolean> {
   let checksum = row.directory_checksum
 
   // Detect stale image: verify the stored checksum matches the current directory.
+  // This must run before the bundle cache check — the cache uses the stored checksum
+  // and would incorrectly serve a stale bundle if the directory has since changed.
   if (imageId && checksum !== PENDING_INSTANCE_CHECKSUM) {
     const currentHash = await hashDir(processRow.directory_id)
     if (currentHash !== checksum) {
@@ -140,6 +129,19 @@ async function loadInstanceReady(instanceId: number): Promise<boolean> {
       imageId = null
       checksum = PENDING_INSTANCE_CHECKSUM
     }
+  }
+
+  if (checksum !== PENDING_INSTANCE_CHECKSUM && await isBundleCached(instanceId, checksum)) {
+    await touchInstance(instanceId)
+    if (row.state !== 'running') {
+      await persistInstanceReady(instanceId)
+    }
+    setInstancePrepareReady(instanceId)
+    return true
+  }
+
+  if (await isBundleCached(instanceId)) {
+    await evictBundleCache(instanceId)
   }
 
   if (!imageId || checksum === PENDING_INSTANCE_CHECKSUM) {
