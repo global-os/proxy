@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { getOrCreateImage } from '../../db/image.js'
+import { hashDir } from '../../db/file.js'
 import { createWorkspaceLogWriter } from '../../services/workspace-logger.js'
 import { resolveWorkspaceIdForInstance } from '../../services/resolve-workspace-for-instance.js'
 import { db } from '../../db/index.js'
@@ -107,31 +108,41 @@ async function loadInstanceReady(instanceId: number): Promise<boolean> {
     await evictBundleCache(instanceId)
   }
 
+  if (row.process_id == null) {
+    setInstancePrepareFailed(instanceId, 'Instance has no process')
+    return false
+  }
+
+  const [processRow] = await db
+    .select({ directory_id: schema.process.directory_id })
+    .from(schema.process)
+    .where(eq(schema.process.id, row.process_id))
+    .limit(1)
+
+  if (!processRow) {
+    setInstancePrepareFailed(instanceId, 'App process not found')
+    return false
+  }
+
+  if (processRow.directory_id === null) {
+    setInstancePrepareFailed(instanceId, 'Process has no app directory')
+    return false
+  }
+
   let imageId = row.image_id
   let checksum = row.directory_checksum
 
+  // Detect stale image: verify the stored checksum matches the current directory.
+  if (imageId && checksum !== PENDING_INSTANCE_CHECKSUM) {
+    const currentHash = await hashDir(processRow.directory_id)
+    if (currentHash !== checksum) {
+      console.log(`[instance] directory changed for ${instanceId}, rebuilding image`)
+      imageId = null
+      checksum = PENDING_INSTANCE_CHECKSUM
+    }
+  }
+
   if (!imageId || checksum === PENDING_INSTANCE_CHECKSUM) {
-    if (row.process_id == null) {
-      setInstancePrepareFailed(instanceId, 'Instance has no process')
-      return false
-    }
-
-    const [processRow] = await db
-      .select({ directory_id: schema.process.directory_id })
-      .from(schema.process)
-      .where(eq(schema.process.id, row.process_id))
-      .limit(1)
-
-    if (!processRow) {
-      setInstancePrepareFailed(instanceId, 'App process not found')
-      return false
-    }
-
-    if (processRow.directory_id === null) {
-      setInstancePrepareFailed(instanceId, 'Process has no app directory')
-      return false
-    }
-
     const workspaceId = await resolveWorkspaceIdForInstance(instanceId)
     const workspaceLog = workspaceId ? createWorkspaceLogWriter(workspaceId) : null
 
