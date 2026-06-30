@@ -35,11 +35,15 @@ function injectImportMap(html: string, libs: ResolvedLib[]): string {
   }
 
   const tag = `<script type="importmap">\n${JSON.stringify({ imports: platformImports }, null, 2)}\n</script>`
+  // Always inject into <head> — import maps in <body> are unreliable in Safari 16
+  if (html.includes('</head>')) {
+    return html.replace('</head>', `${tag}\n</head>`)
+  }
   const moduleIdx = html.indexOf('<script type="module"')
   if (moduleIdx >= 0) {
     return html.slice(0, moduleIdx) + tag + '\n' + html.slice(moduleIdx)
   }
-  return html.replace('</head>', `${tag}\n</head>`)
+  return html + '\n' + tag
 }
 
 function injectSideEffectModules(html: string, libs: ResolvedLib[]): string {
