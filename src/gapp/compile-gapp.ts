@@ -20,10 +20,21 @@ function injectDependencyScripts(html: string, deps: { path: string }[]): string
 
 function injectImportMap(html: string, libs: ResolvedLib[]): string {
   if (libs.length === 0) return html
-  const imports: Record<string, string> = {}
-  for (const lib of libs) imports[lib.name] = lib.urlPath
-  const tag = `<script type="importmap">\n${JSON.stringify({ imports }, null, 2)}\n</script>`
-  // Must appear before the first module script
+
+  // Platform libs as defaults — existing HTML entries take precedence on conflict.
+  const platformImports: Record<string, string> = {}
+  for (const lib of libs) platformImports[lib.name] = lib.urlPath
+
+  const existingMatch = html.match(/<script type="importmap">([\s\S]*?)<\/script>/)
+  if (existingMatch) {
+    let existing: { imports?: Record<string, string> } = {}
+    try { existing = JSON.parse(existingMatch[1]) } catch { /* keep empty */ }
+    const merged = { imports: { ...platformImports, ...(existing.imports ?? {}) } }
+    const replacement = `<script type="importmap">\n${JSON.stringify(merged, null, 2)}\n</script>`
+    return html.replace(existingMatch[0], replacement)
+  }
+
+  const tag = `<script type="importmap">\n${JSON.stringify({ imports: platformImports }, null, 2)}\n</script>`
   const moduleIdx = html.indexOf('<script type="module"')
   if (moduleIdx >= 0) {
     return html.slice(0, moduleIdx) + tag + '\n' + html.slice(moduleIdx)
