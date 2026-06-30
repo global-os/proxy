@@ -1,7 +1,6 @@
 import { Hono } from 'hono'
 import { eq } from 'drizzle-orm'
 import type { Env } from '../types.js'
-import { db } from '../db/index.js'
 import * as schema from '../db/schema.js'
 import { generateInstanceSlug } from '../runtime/instance/slug.js'
 import { instancePublicUrl } from '../runtime/urls.js'
@@ -12,6 +11,7 @@ router.post('/', async (c) => {
   const user = c.get('user')
   if (!user) return c.json({ message: 'Unauthorized' }, 401)
 
+  const db = c.get('db')
   const body = await c.req.json() as { processId?: number; domain?: string }
   const { processId, domain } = body
 
@@ -52,6 +52,7 @@ router.delete('/:webviewId', async (c) => {
   const user = c.get('user')
   if (!user) return c.json({ message: 'Unauthorized' }, 401)
 
+  const db = c.get('db')
   const webviewId = Number(c.req.param('webviewId'))
   if (!Number.isFinite(webviewId)) return c.json({ message: 'Invalid webviewId' }, 400)
 
