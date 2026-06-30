@@ -7,29 +7,21 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  html, body, #root {
+  html, body {
     height: 100%;
     overflow: hidden;
-  }
-
-  body {
     font-family: Tahoma, "MS Sans Serif", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
     font-size: 12px;
     color: #000;
     background: #c0c0c0;
   }
 
-  #root {
-    height: 100%;
-  }
-
   .shell {
-    position: relative;
     height: 100%;
     display: flex;
     flex-direction: column;
     padding: 4px;
-    min-height: 0;
+    gap: 4px;
   }
 
   .toolbar {
@@ -37,7 +29,6 @@
     align-items: center;
     gap: 4px;
     padding: 4px;
-    margin-bottom: 4px;
     background: #c0c0c0;
     border: 2px solid;
     border-color: #fff #808080 #808080 #fff;
@@ -56,15 +47,10 @@
 
   button:active:not(:disabled) {
     border-color: #808080 #fff #fff #808080;
-    padding-top: 5px;
-    padding-left: 11px;
-    padding-bottom: 3px;
-    padding-right: 9px;
+    padding: 5px 9px 3px 11px;
   }
 
-  button:disabled {
-    color: #808080;
-  }
+  button:disabled { color: #808080; }
 
   .pathbar {
     flex: 1 1 auto;
@@ -89,15 +75,12 @@
     overflow: hidden;
   }
 
-  .list-head, .list-row {
+  .list-head {
     display: grid;
     grid-template-columns: 28px 1fr 72px;
     align-items: center;
     gap: 6px;
     padding: 3px 8px;
-  }
-
-  .list-head {
     background: #c0c0c0;
     border-bottom: 1px solid #808080;
     font-weight: 700;
@@ -111,62 +94,56 @@
   }
 
   .list-row {
+    display: grid;
+    grid-template-columns: 28px 1fr 72px;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
     cursor: default;
     user-select: none;
     border-bottom: 1px solid #ececec;
   }
 
-  .list-row:hover:not(.selected) {
-    background: #d8e8ff;
-  }
+  .list-row:hover:not(.selected) { background: #d8e8ff; }
+  .list-row.selected { background: #000080; color: #fff; }
 
-  .list-row.selected {
-    background: #000080;
-    color: #fff;
-  }
-
-  .icon {
-    text-align: center;
-    font-size: 14px;
-    line-height: 1;
-  }
-
-  .kind {
-    color: inherit;
-    opacity: 0.75;
-    font-size: 11px;
-  }
+  .icon { text-align: center; font-size: 14px; line-height: 1; }
+  .kind { color: inherit; opacity: 0.75; font-size: 11px; }
 
   .statusbar {
     flex: 0 0 auto;
-    margin-top: 4px;
     padding: 3px 6px;
     background: #c0c0c0;
     border: 2px solid;
     border-color: #808080 #fff #fff #808080;
     min-height: 22px;
-    color: #000;
   }
 
   .statusbar.error { color: #800000; }
 
-  .empty {
-    padding: 24px;
-    text-align: center;
-    color: #666;
-  }
+  .empty { padding: 24px; text-align: center; color: #666; }
 </style>
 </head>
 <body>
-<div id="root"></div>
-<script type="importmap">
-{
-  "imports": {
-    "preact": "./preact.mjs",
-    "preact/hooks": "./hooks.mjs"
-  }
-}
-</script>
+<div class="shell">
+  <div class="toolbar">
+    <button id="up-btn" type="button" disabled>↑ Up</button>
+    <button id="mkdir-btn" type="button">New Folder</button>
+    <button id="rename-btn" type="button" disabled>Rename</button>
+    <button id="delete-btn" type="button" disabled>Delete</button>
+    <button id="refresh-btn" type="button">Refresh</button>
+    <div class="pathbar" id="pathbar">Desktop</div>
+  </div>
+  <div class="panel">
+    <div class="list-head">
+      <span></span>
+      <span>Name</span>
+      <span>Type</span>
+    </div>
+    <div class="list-body" id="list-body"></div>
+  </div>
+  <div class="statusbar" id="statusbar">Loading…</div>
+</div>
 <script type="module" src="app.js"></script>
 </body>
 </html>
