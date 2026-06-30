@@ -13,8 +13,10 @@ export type ResolvedLib = {
 
 /** Resolve a map of name → semver-range to specific versions from the registry. */
 export function resolveLibDeps(deps: Record<string, string>): ResolvedLib[] {
+  console.log(`[resolve-lib-deps] platformLibsDir=${platformLibsDir} deps=${JSON.stringify(deps)}`)
   return Object.entries(deps).map(([name, range]) => {
     const libDir = path.join(platformLibsDir, name)
+    console.log(`[resolve-lib-deps] checking ${libDir} → exists=${fs.existsSync(libDir)}`)
     if (!fs.existsSync(libDir)) {
       throw new Error(`Unknown platform lib: "${name}"`)
     }

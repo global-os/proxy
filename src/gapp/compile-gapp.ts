@@ -47,6 +47,7 @@ export async function compileGappTree(
   ctx?: GappCompileContext,
 ): Promise<FileEntry[]> {
   const manifest = resolveGappConfig(dirName, files)
+  console.log(`[compile-gapp] ${dirName}: manifest.deps=${JSON.stringify(manifest?.deps)} hasSquint=${!!manifest?.compile?.squint}`)
 
   const libs = manifest?.deps ? resolveLibDeps(manifest.deps) : []
   const hasSquint = !!manifest?.compile?.squint
