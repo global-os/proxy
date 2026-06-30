@@ -7,20 +7,7 @@
   "compile": {
     "squint": {
       "source": "app.cljs",
-      "output": "app.js",
-      "externals": {
-        "yjs": "Y"
-      }
-    }
-  },
-  "dependencies": {
-    "yjs": {
-      "version": "13.6.20",
-      "source": "bundled",
-      "path": "yjs.js",
-      "format": "iife",
-      "global": "Y",
-      "order": 1
+      "output": "app.js"
     }
   }
 }

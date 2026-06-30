@@ -1,18 +1,8 @@
 (ns editor)
 
-;; Squint .gapp reference editor
-;;
-;; Sustainable practices:
-;; - Yjs Y.Text holds canonical document bytes; the textarea mirrors it (observe + input).
-;; - Kernel replies via window "message" (same pattern as textedit.gapp).
-;; - Kernel only: ready, init/init:fresh, save — never fetch /api from the iframe.
-;; - Platform deps are vendored IIFE files (yjs.js) declared in gapp.json.
 (def SAVE_TIMEOUT_MS 15000)
 
 (def state (atom {:saving false}))
-
-(def doc (js/Y.Doc.))
-(def ytext (.getText doc "content"))
 
 (def $editor (.getElementById js/document "editor"))
 (def $filename (.getElementById js/document "filename"))
@@ -23,34 +13,10 @@
   (.postMessage js/window.parent msg "*"))
 
 (defn get-content []
-  (.toString ytext))
+  (.-value $editor))
 
 (defn set-content! [text]
-  (.transact doc
-    (fn []
-      (.delete ytext 0 (.length ytext))
-      (.insert ytext 0 (or text "")))))
-
-(defn flush-editor! []
-  (let [text (.-value $editor)]
-    (.transact doc
-      (fn []
-        (when (not= text (get-content))
-          (.delete ytext 0 (.length ytext))
-          (.insert ytext 0 text))))))
-
-(defn sync-editor! []
-  (let [text (get-content)]
-    (when (not= text (.-value $editor))
-      (set! (.-value $editor) text))))
-
-(defn on-input! [_]
-  (let [text (.-value $editor)]
-    (.transact doc
-      (fn []
-        (when (not= text (get-content))
-          (.delete ytext 0 (.length ytext))
-          (.insert ytext 0 text))))))
+  (set! (.-value $editor) (or text "")))
 
 (defn status! [text err?]
   (set! (.-textContent $status) text)
@@ -64,7 +30,6 @@
 
 (defn load! [msg]
   (set-content! (.-content msg))
-  (sync-editor!)
   (set-filename! (.-filename msg))
   (swap! state assoc :saving false)
   (render!)
@@ -94,7 +59,6 @@
       (if (zero? (.-length name))
         (status! "Filename required" true)
         (do
-          (flush-editor!)
           (swap! state assoc :saving true)
           (render!)
           (status! "" false)
@@ -127,8 +91,6 @@
     (when (and (object? msg) (.-type msg))
       (handle-msg msg))))
 
-(.observe ytext sync-editor!)
-(.addEventListener $editor "input" on-input!)
 (.addEventListener $save "click" #(save!))
 (.addEventListener js/window "message" on-kernel-message!)
 (.addEventListener js/document "keydown"
