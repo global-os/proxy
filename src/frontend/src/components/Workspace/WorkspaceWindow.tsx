@@ -276,7 +276,7 @@ const StyledIframe = createComponent(
     display: 'block',
   }),
   'iframe',
-  ['src', 'srcdoc', 'data-window-id']
+  ['src', 'srcDoc', 'data-window-id']
 )
 
 type Props = {
@@ -349,7 +349,7 @@ export function WorkspaceWindow({
           <StyledIframe
             dragging={isInteracting}
             frontmost={frontmost}
-            srcdoc={win.srcdoc!}
+            srcDoc={win.srcdoc!}
             data-window-id={String(win.id)}
             innerRef={onIframeRef}
           />
