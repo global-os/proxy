@@ -111,24 +111,6 @@ export async function getOrCreateImage(
   directory_checksum: string
   tar_checksum: string
 }> {
-  const cached = await resolveImageMeta(directoryId)
-  if (cached) {
-    const [row] = await db
-      .select({ tar_checksum: image.tar_checksum })
-      .from(image)
-      .where(eq(image.id, cached.id))
-      .limit(1)
-
-    if (row?.tar_checksum) {
-      await opts?.compile?.log.info('compile', 'Using cached app bundle')
-      return {
-        id: cached.id,
-        directory_checksum: cached.directory_checksum,
-        tar_checksum: row.tar_checksum,
-      }
-    }
-  }
-
   opts?.onProgress?.('Building snapshot…')
   const directory_checksum = await hashDir(directoryId)
   const [existing] = await db
