@@ -13,6 +13,7 @@ import {
   isBundleCached,
   touchBundleCache,
 } from '../cache/store.js'
+import { imageCacheKey } from '../../gapp/compiler-version.js'
 import { PENDING_INSTANCE_CHECKSUM } from './constants.js'
 import {
   setInstancePrepareFailed,
@@ -131,7 +132,10 @@ async function loadInstanceReady(instanceId: number): Promise<boolean> {
     }
   }
 
-  if (checksum !== PENDING_INSTANCE_CHECKSUM && await isBundleCached(instanceId, checksum)) {
+  // Bundle cache key includes build SHA so compiler changes bust the cache automatically.
+  const bundleCacheKey = checksum !== PENDING_INSTANCE_CHECKSUM ? imageCacheKey(checksum) : null
+
+  if (bundleCacheKey !== null && await isBundleCached(instanceId, bundleCacheKey)) {
     await touchInstance(instanceId)
     if (row.state !== 'running') {
       await persistInstanceReady(instanceId)
@@ -197,7 +201,7 @@ async function loadInstanceReady(instanceId: number): Promise<boolean> {
 
   setInstancePrepareProgress(instanceId, 'extracting-tar', 'Extracting tar…')
   const extractStart = Date.now()
-  await startInstanceRuntime(instanceId, checksum, imageRow.tar_bytes)
+  await startInstanceRuntime(instanceId, imageCacheKey(checksum), imageRow.tar_bytes)
   console.log(`[instance] parsed tar for ${instanceId} +${Date.now() - extractStart}ms`)
   await persistInstanceReady(instanceId)
   setInstancePrepareReady(instanceId)
