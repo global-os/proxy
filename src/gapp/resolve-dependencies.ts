@@ -1,9 +1,6 @@
 import fs from 'node:fs/promises'
 import type { GappDependencySpec, GappManifest } from './types.js'
-import {
-  platformRegistryCandidates,
-  platformRegistryFile,
-} from './registry-paths.js'
+import { platformRegistryFile } from './registry-paths.js'
 
 export type ResolvedDependency = {
   id: string
@@ -23,22 +20,7 @@ function depOrder(id: string, spec: GappDependencySpec): number {
 }
 
 async function readPlatformArtifact(name: string): Promise<Buffer> {
-  const candidates = [
-    platformRegistryFile(name),
-    ...platformRegistryCandidates(name),
-  ]
-
-  for (const registryPath of [...new Set(candidates)]) {
-    try {
-      return await fs.readFile(registryPath)
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
-    }
-  }
-
-  throw new Error(
-    `platform registry artifact not found: ${name} (checked ${[...new Set(candidates)].join(', ')})`,
-  )
+  return fs.readFile(platformRegistryFile(name))
 }
 
 export async function resolvePlatformDependencies(
