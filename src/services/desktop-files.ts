@@ -91,7 +91,6 @@ export async function upsertDesktopFile(
       name,
       content: bytes,
       mime_type,
-      hash_method: 'sha1',
       parent_id: desktopId,
       user_id: userId,
     })

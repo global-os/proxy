@@ -166,7 +166,6 @@ async function ensureFile(
       name,
       content,
       mime_type,
-      hash_method: 'sha1',
       parent_id: parentId,
       user_id: userId,
       is_stock: true,

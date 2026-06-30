@@ -1,0 +1,1 @@
+ALTER TABLE image ADD COLUMN IF NOT EXISTS cache_key text;

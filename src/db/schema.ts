@@ -99,7 +99,6 @@ export const file = pgTable('file', {
   name: text('name').notNull(),
   content: bytea('content').notNull(),
   mime_type: text('mime_type').notNull(),
-  hash_method: text('hash_method').notNull(),
   parent_id: integer('parent_id').notNull().references(() => directory.id),
   user_id: text('user_id').references(() => user.id),
   created_at: timestamp('created_at').defaultNow().notNull(),
@@ -187,7 +186,6 @@ export const instances = pgTable('instances', {
   id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
   process_id: integer('process_id').references(() => process.id, { onDelete: 'cascade' }),
-  task_id: integer('task_id').references(() => task.id, { onDelete: 'cascade' }),
   image_id: integer('image_id').references(() => image.id),
   directory_checksum: text('directory_checksum').notNull(),
   state: instanceStateEnum('state').notNull().default('starting'),
@@ -195,7 +193,6 @@ export const instances = pgTable('instances', {
   created_at: timestamp('created_at').defaultNow().notNull(),
 }, (table) => [
   index('instances_process_id_idx').on(table.process_id),
-  index('instances_task_id_idx').on(table.task_id),
 ]);
 
 /** LRU metadata for extracted instance bundles served from Postgres. */
