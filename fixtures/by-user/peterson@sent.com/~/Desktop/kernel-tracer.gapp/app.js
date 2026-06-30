@@ -1,5 +1,5 @@
-import { h, render } from 'preact'
-import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
+import { h, render } from './preact.mjs'
+import { useCallback, useEffect, useRef, useState } from './hooks.mjs'
 import { onTraceEvent, postToParent, waitForAnyMessage, waitForMessage } from './kernel.js'
 
 const MAX_EVENTS = 500
