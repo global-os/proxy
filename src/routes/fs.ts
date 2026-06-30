@@ -1,3 +1,4 @@
+import { createHash } from 'crypto'
 import { Hono } from 'hono'
 import { eq } from 'drizzle-orm'
 import * as middleware from '../middleware.js'
@@ -8,6 +9,7 @@ import { resolveDesktopEntryIcon } from '../services/global-pc-icons.js'
 import { ensureGlobalPcForUser, resolveGlobalPcIdForWorkspace } from '../services/global-pc.js'
 import { buildUserFileIndex } from '../services/file-index.js'
 import { readResourceIconBmp } from '../services/local-icons.js'
+import { hashDir } from '../db/file.js'
 
 const router = new Hono<Env>()
 
@@ -71,6 +73,40 @@ router.get('/desktop', async (c) => {
       ...files.map(f => ({ type: 'file' as const, id: f.id, name: f.name, mime_type: f.mime_type })),
     ],
   })
+})
+
+router.get('/checksum', async (c) => {
+  const user = c.get('user')
+  if (!user) return c.json({ error: 'Unauthorized' }, 401)
+
+  const db = c.get('db')
+  const entryType = c.req.query('entryType')
+  const idRaw = c.req.query('id')
+  const id = Number.parseInt(idRaw ?? '', 10)
+  if (!Number.isFinite(id) || (entryType !== 'file' && entryType !== 'directory')) {
+    return c.json({ error: 'entryType and id are required' }, 400)
+  }
+
+  if (entryType === 'file') {
+    const [row] = await db
+      .select({ content: schema.file.content, user_id: schema.file.user_id })
+      .from(schema.file)
+      .where(eq(schema.file.id, id))
+      .limit(1)
+    if (!row || row.user_id !== user.id) return c.json({ error: 'Not found' }, 404)
+    const bytes = Buffer.isBuffer(row.content) ? row.content : Buffer.from(row.content)
+    const checksum = createHash('sha1').update(bytes).digest('hex')
+    return c.json({ checksum })
+  }
+
+  const [row] = await db
+    .select({ user_id: schema.directory.user_id })
+    .from(schema.directory)
+    .where(eq(schema.directory.id, id))
+    .limit(1)
+  if (!row || row.user_id !== user.id) return c.json({ error: 'Not found' }, 404)
+  const checksum = await hashDir(id)
+  return c.json({ checksum })
 })
 
 router.get('/index', async (c) => {

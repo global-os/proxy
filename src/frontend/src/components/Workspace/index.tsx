@@ -1,6 +1,6 @@
 import { createComponent } from 'react-fela'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { WorkspaceProps } from './types'
 import { useWorkspace } from './useWorkspace'
 import { WorkspaceWindow } from './WorkspaceWindow'
@@ -69,7 +69,7 @@ const IconBox = createComponent(
     opacity: launchable ? 1 : 0.85,
   }),
   'div',
-  ['launchable', 'onClick']
+  ['launchable', 'onClick', 'onContextMenu']
 )
 
 const iconChrome = {
@@ -137,6 +137,27 @@ const LaunchStatus = createComponent(
   'div'
 )
 
+const ContextMenu = createComponent(
+  ({ x, y }: { x: number; y: number }) => ({
+    position: 'fixed',
+    left: `${x}px`,
+    top: `${y}px`,
+    background: '#fff',
+    border: '1px solid #ccc',
+    borderRadius: '6px',
+    padding: '8px 12px',
+    boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+    zIndex: 9999,
+    minWidth: '220px',
+    fontFamily: 'Tahoma, "MS Sans Serif", "Segoe UI", ui-sans-serif, system-ui, sans-serif',
+    fontSize: '12px',
+    color: '#333',
+    userSelect: 'all',
+  }),
+  'div',
+  ['x', 'y'],
+)
+
 const computeX = (x: number, width: number) =>
   (window as any).innerWidth / 2 - width / 2 + x
 
@@ -181,6 +202,38 @@ export function Workspace({ workspaceId, children }: WorkspaceProps) {
   )
   const [launchMessage, setLaunchMessage] = useState<string | null>(null)
   const queryClient = useQueryClient()
+
+  type ContextMenuState = {
+    x: number
+    y: number
+    item: DesktopItem
+    checksum: string | null
+  }
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
+
+  useEffect(() => {
+    if (!contextMenu) return
+    const close = () => setContextMenu(null)
+    window.addEventListener('click', close)
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape') close() })
+    return () => {
+      window.removeEventListener('click', close)
+    }
+  }, [!!contextMenu])
+
+  const onIconContextMenu = useCallback((e: ReactMouseEvent, item: DesktopItem) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setContextMenu({ x: e.clientX, y: e.clientY, item, checksum: null })
+    void fetch(`/api/fs/checksum?entryType=${item.type}&id=${item.id}`, { credentials: 'include' })
+      .then(r => r.json())
+      .then((body: { checksum?: string }) => {
+        setContextMenu(prev => prev?.item.id === item.id ? { ...prev, checksum: body.checksum ?? 'error' } : prev)
+      })
+      .catch(() => {
+        setContextMenu(prev => prev?.item.id === item.id ? { ...prev, checksum: 'error' } : prev)
+      })
+  }, [])
 
   const { data: desktopData } = useQuery<DesktopApiResponse>({
     queryKey: ['desktop', workspaceId],
@@ -358,6 +411,7 @@ export function Workspace({ workspaceId, children }: WorkspaceProps) {
               key={`${item.type}-${item.id}`}
               launchable={launchable}
               onClick={launchable ? () => void openProgram(item) : undefined}
+              onContextMenu={(e: ReactMouseEvent) => onIconContextMenu(e, item)}
             >
               {item.icon
                 ? <IconBitmap src={`/api/fs/icons?path=${encodeURIComponent(item.icon)}`} alt="" />
@@ -368,6 +422,15 @@ export function Workspace({ workspaceId, children }: WorkspaceProps) {
         })}
       </IconGrid>
       {launchMessage && <LaunchStatus>{launchMessage}</LaunchStatus>}
+      {contextMenu && (
+        <ContextMenu x={contextMenu.x} y={contextMenu.y}>
+          <div style={{ fontWeight: 600, marginBottom: '4px', userSelect: 'none' }}>{contextMenu.item.name}</div>
+          <div style={{ color: '#888', marginBottom: '2px', userSelect: 'none' }}>checksum</div>
+          <div style={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>
+            {contextMenu.checksum ?? '…'}
+          </div>
+        </ContextMenu>
+      )}
       <Taskbar onLaunchApp={launchFromIndex} />
       <WorkspaceLogger workspaceId={workspaceId} />
       {state.windows.map((win, i) => {
