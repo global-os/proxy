@@ -69,14 +69,59 @@
   textarea:focus { border-color: #888; }
   #statusbar { font-size: 12px; color: #888; min-height: 1.2em; }
   #statusbar.error { color: #b91c1c; }
+  #file-picker {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+  }
+  .picker-box {
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 240px;
+    max-width: 320px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  }
+  .picker-title { font-size: 0.9rem; font-weight: 600; color: #333; }
+  #file-list {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+    outline: none;
+    width: 100%;
+    min-height: 140px;
+  }
+  #file-list:focus { border-color: #888; }
+  #picker-status { font-size: 12px; color: #b91c1c; min-height: 1em; }
+  .picker-buttons { display: flex; gap: 0.5rem; justify-content: flex-end; }
 </style>
 </head>
 <body>
+  <div id="file-picker">
+    <div class="picker-box">
+      <div class="picker-title">Open from Desktop</div>
+      <select id="file-list" size="8"></select>
+      <div id="picker-status"></div>
+      <div class="picker-buttons">
+        <button id="picker-cancel-btn" type="button">Cancel</button>
+        <button id="picker-open-btn" type="button">Open</button>
+      </div>
+    </div>
+  </div>
   <div class="toolbar">
     <div class="filename-wrap">
       <span class="filename-label">File</span>
       <span id="filename">Untitled.txt</span>
     </div>
+    <button id="open-btn" type="button">Open</button>
     <button id="save-btn" type="button">Save</button>
   </div>
   <textarea id="editor" spellcheck="false"></textarea>
