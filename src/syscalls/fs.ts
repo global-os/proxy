@@ -5,6 +5,7 @@ import { cleanupDirectoryAppRefs } from '../services/directory-cleanup.js'
 import { resolveDirectoryPath } from '../services/directory-path.js'
 import { resolveDesktopDirectoryId, upsertDesktopFile } from '../services/desktop-files.js'
 import type { SyscallContext, SyscallHandler, SyscallResult } from './types.js'
+import { isVfsId, vfsBrowse, vfsRead, VfsError, MNT_ENTRY } from './vfs.js'
 
 class FsError extends Error {
   constructor(
@@ -17,6 +18,9 @@ class FsError extends Error {
 
 function fail(err: unknown): SyscallResult {
   if (err instanceof FsError) {
+    return { ok: false, message: err.message, status: err.status }
+  }
+  if (err instanceof VfsError) {
     return { ok: false, message: err.message, status: err.status }
   }
   const message = err instanceof Error ? err.message : 'Request failed'
@@ -156,12 +160,18 @@ async function assertNameAvailable(
 
 export const fsBrowse: SyscallHandler = async ({ db, userId }, args) => {
   try {
+    // Virtual filesystem paths
+    if (isVfsId(args.directoryId)) {
+      return { ok: true, result: await vfsBrowse(args.directoryId) }
+    }
+
     const directoryId = typeof args.directoryId === 'number' ? args.directoryId : undefined
     const resolvedId = directoryId ?? await resolveDesktopDirectoryId(db, userId)
     if (!resolvedId) throw new FsError('Desktop not found', 404)
 
     const dir = await getDirectory(db, userId, resolvedId)
     const usersRootId = await resolveUsersDirectoryId(db, userId)
+    const isDesktop = dir.parent_id === null || dir.id === usersRootId
 
     const [dirs, files] = await Promise.all([
       db.select({ id: schema.directory.id, name: schema.directory.name })
@@ -172,6 +182,17 @@ export const fsBrowse: SyscallHandler = async ({ db, userId }, args) => {
         .where(eq(schema.file.parent_id, resolvedId)),
     ])
 
+    const entries = [
+      ...dirs.map(d => ({ type: 'directory' as const, id: d.id as number | string, name: d.name })),
+      ...files.map(f => ({
+        type: 'file' as const,
+        id: f.id as number | string,
+        name: f.name,
+        mime_type: f.mime_type,
+      })),
+      ...(isDesktop ? [MNT_ENTRY] : []),
+    ].sort((a, b) => a.name.localeCompare(b.name))
+
     return {
       ok: true,
       result: {
@@ -180,15 +201,7 @@ export const fsBrowse: SyscallHandler = async ({ db, userId }, args) => {
         parent_id: dir.parent_id,
         path: await resolveDirectoryPath(db, dir.id),
         can_go_up: dir.parent_id !== null && dir.id !== usersRootId,
-        entries: [
-          ...dirs.map(d => ({ type: 'directory' as const, id: d.id, name: d.name })),
-          ...files.map(f => ({
-            type: 'file' as const,
-            id: f.id,
-            name: f.name,
-            mime_type: f.mime_type,
-          })),
-        ].sort((a, b) => a.name.localeCompare(b.name)),
+        entries,
       },
     }
   } catch (err) {
@@ -332,6 +345,12 @@ function isTextFile(mime_type: string, bytes: Buffer): boolean {
 export const fsRead: SyscallHandler = async ({ db, userId }, args) => {
   try {
     const fileId = args.fileId
+
+    // Virtual filesystem file read
+    if (isVfsId(fileId)) {
+      return { ok: true, result: await vfsRead(fileId) }
+    }
+
     if (typeof fileId !== 'number') throw new FsError('fileId is required')
 
     await getFile(db, userId, fileId)
