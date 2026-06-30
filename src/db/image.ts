@@ -6,7 +6,7 @@ import { db } from "./index.js";
 import { directory, image } from "./schema.js";
 import type { GappCompileContext } from "../gapp/compile-context.js";
 import { compileGappTree } from "../gapp/compile-gapp.js";
-import { COMPILER_VERSION } from "../gapp/compiler-version.js";
+import { COMPILER_CACHE_KEY } from "../gapp/compiler-version.js";
 import { hashDir, hashTree, collectTree, type DirEntry, type FileEntry } from "./file.js";
 
 type InnerFns = {
@@ -124,7 +124,7 @@ export async function getOrCreateImage(
     .where(and(
       eq(image.directory_id, directoryId),
       eq(image.directory_checksum, directory_checksum),
-      eq(image.compiler_version, COMPILER_VERSION),
+      eq(image.compiler_version, COMPILER_CACHE_KEY),
     ))
     .limit(1)
 
@@ -185,7 +185,7 @@ export async function createImage(
 
   const [row] = await db
     .insert(image)
-    .values({ directory_id: directoryId, directory_checksum, tar_checksum, tar_bytes, compiler_version: COMPILER_VERSION })
+    .values({ directory_id: directoryId, directory_checksum, tar_checksum, tar_bytes, compiler_version: COMPILER_CACHE_KEY })
     .returning({ id: image.id });
 
   return row.id;
