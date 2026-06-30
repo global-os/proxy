@@ -349,7 +349,7 @@ export function WorkspaceWindow({
           <StyledIframe
             dragging={isInteracting}
             frontmost={frontmost}
-            srcdoc={win.srcdoc}
+            srcdoc={win.srcdoc!}
             data-window-id={String(win.id)}
             innerRef={onIframeRef}
           />
