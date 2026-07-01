@@ -35,11 +35,12 @@ const HOP_BY_HOP = new Set([
 
 /**
  * Rewrite Set-Cookie so the browser accepts it under the proxy origin.
- * Replace the upstream domain with the proxy host and downgrade SameSite=None.
+ * Strip Domain entirely (browser defaults to the response host) and
+ * downgrade SameSite=None which requires a cross-origin context we don't have.
  */
-function rewriteSetCookie(setCookie: string, proxyHost: string): string {
+function rewriteSetCookie(setCookie: string): string {
   return setCookie
-    .replace(/;\s*domain=[^;,]*/gi, `; Domain=${proxyHost}`)
+    .replace(/;\s*domain=[^;,]*/gi, '')
     .replace(/;\s*samesite=none/gi, '; SameSite=Lax')
 }
 
@@ -120,8 +121,12 @@ export async function proxyWebviewRequest(
   boundDomain: string,
   upstreamPath: string,
   incomingRequest: Request,
-  proxyHost: string,
 ): Promise<Response> {
+  // Cloudflare/CDN infrastructure paths — not real upstream content.
+  if (upstreamPath.startsWith('/cdn-cgi/')) {
+    return new Response('Not found', { status: 404 })
+  }
+
   const cross = extractCrossDomain(upstreamPath)
   const fetchDomain = cross ? cross.domain : boundDomain
   const fetchPath = cross ? cross.rest : upstreamPath
@@ -164,7 +169,7 @@ export async function proxyWebviewRequest(
     const lower = key.toLowerCase()
     if (STRIP_RESPONSE_HEADERS.has(lower)) continue
     if (lower === 'set-cookie') {
-      responseHeaders.append('Set-Cookie', rewriteSetCookie(value, proxyHost))
+      responseHeaders.append('Set-Cookie', rewriteSetCookie(value))
       continue
     }
     if (lower === 'transfer-encoding') continue
