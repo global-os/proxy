@@ -165,10 +165,24 @@ export async function proxyWebviewRequest(
   }
 
   const responseHeaders = new Headers()
+
+  // getSetCookie() (undici / Node 18+) returns each Set-Cookie header as a
+  // separate string, avoiding the comma-joining that headers.entries() can
+  // produce, which corrupts cookie values that contain commas (e.g. expires).
+  const setCookies: string[] =
+    typeof (upstreamResponse.headers as unknown as { getSetCookie?(): string[] }).getSetCookie === 'function'
+      ? (upstreamResponse.headers as unknown as { getSetCookie(): string[] }).getSetCookie()
+      : []
+  for (const raw of setCookies) {
+    responseHeaders.append('Set-Cookie', rewriteSetCookie(raw))
+  }
+
   for (const [key, value] of upstreamResponse.headers.entries()) {
     const lower = key.toLowerCase()
     if (STRIP_RESPONSE_HEADERS.has(lower)) continue
     if (lower === 'set-cookie') {
+      // Handled above via getSetCookie(); skip to avoid double-setting.
+      if (setCookies.length > 0) continue
       responseHeaders.append('Set-Cookie', rewriteSetCookie(value))
       continue
     }
