@@ -69,14 +69,22 @@ function rewriteHtmlAttrs(html: string, boundDomain: string): string {
 }
 
 /**
- * Script injected at the top of every proxied HTML page.
- * Monkey-patches fetch() and XMLHttpRequest.open() to route ALL cross-origin
- * requests through the proxy. The proxy rewrites Origin/Referer to the bound
- * domain before forwarding, so third-party services (e.g. Google Sign-In)
- * see x.com as the caller rather than our proxy subdomain.
+ * Script injected at the top of every proxied HTML page. Two sections:
+ *
+ * REPLACEMENTS — intercept platform APIs and change what they do so that
+ * cross-origin network requests are transparently rerouted through the proxy.
+ * The proxy rewrites Origin/Referer server-side so upstream services see the
+ * bound domain (e.g. x.com) rather than our proxy subdomain.
+ *
+ * SHIMS — restore behaviour the site expects on its real domain that breaks
+ * in the proxy context. These don't change intent; they fix the mismatch
+ * between where the site thinks it's running and where it actually is.
  */
 function buildInterceptScript(): string {
   return `<script>(function(){
+
+/* ── REPLACEMENTS ─────────────────────────────────────────────────────── */
+
 var _o=location.origin;
 function _p(u){
   try{
@@ -98,6 +106,11 @@ XMLHttpRequest.prototype.open=function(m,u){
   arguments[1]=rw!==null?rw:u;
   return _xo.apply(this,arguments);
 };
+
+/* ── SHIMS ────────────────────────────────────────────────────────────── */
+
+// document.cookie: strip Domain= so cookies land on the proxy host instead
+// of the site's real domain, which the browser would reject.
 try{
   var _cd=Object.getOwnPropertyDescriptor(Document.prototype,'cookie');
   if(_cd&&_cd.set){
@@ -107,6 +120,7 @@ try{
     }});
   }
 }catch(e){}
+
 })()</script>`
 }
 
