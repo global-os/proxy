@@ -93,6 +93,28 @@ Add new platform capabilities by implementing a handler in `src/syscalls/`, regi
 | Hello World editor | `fixtures/.../helloworld.gapp/` | `ready` / `init` / `save`; imperative JS |
 | File Browser | `fixtures/.../filebrowser.gapp/` | `kernel.js` + `app.js` (Preact `h()`); `preact.mjs` / `hooks.mjs` vendored ESM (wget from esm.sh, import map in `index.html`); `fs:*` messages |
 | Squint editor | `fixtures/.../squint-editor.gapp/` | `app.cljs` → compiled `app.js` via `compileGappTree`; platform deps `yjs` / `rxjs` |
+| Twitter / X | `fixtures/.../twitter.gapp/` | `webview:create` → kernel → `POST /api/webviews` → proxy iframe |
+| Instagram | `fixtures/.../instagram.gapp/` | same webview pattern, `domain: 'instagram.com'` |
+| YouTube | `fixtures/.../youtube.gapp/` | same webview pattern, `domain: 'youtube.com'` |
+
+### Webview `.gapp` pattern
+
+A **webview app** embeds an external website via the proxy layer instead of serving its own files.
+
+**Kernel messages used:**
+
+| `type` | Direction | Action |
+|--------|-----------|--------|
+| `webview:create` | app → kernel | kernel calls `POST /api/webviews` with `{ processId, domain }`; replies `webview:create:complete` or `webview:create:error` |
+| `webview:destroy` | app → kernel | kernel calls `DELETE /api/webviews/:id` |
+
+**`webview:create:complete` payload:** `{ webviewId, slug, domain, proxyOrigin }` — app saves state and sets `frame.src = proxyOrigin + '/'`.
+
+**On `init` (restored state):** `data.proxyOrigin` is present — skip `webview:create`, show iframe directly.
+
+**Platform library:** vendor `src/gapp/platform/messaging.js` into the `.gapp` dir. It exposes `window.KernelMessaging.nextId()` for unique request IDs scoped to the current visit (visit ID issued by `POST /api/visits` on kernel startup). Include it before your app script.
+
+**Minimal webview app files:** `index.html`, `app.js`, `messaging.js` (vendored). No server-side build needed.
 
 **Static apps:** ship all runtime assets inside the `.gapp` directory (HTML, JS, vendored `.mjs` libs). No Node build required in-repo unless you choose to bundle.
 
@@ -129,6 +151,8 @@ Public paths `/health` and `/debug` bypass the `/app` prefix.
 | FS / RLS | `src/routes/fs.ts`, `src/db/file.ts`, `src/db/image.ts` |
 | Syscalls | `src/routes/syscalls.ts`, `src/syscalls/` |
 | Session kernel | `src/frontend/src/kernel/session-kernel.ts`, `useSessionKernel.ts`, `state.ts` |
+| Webview proxy | `src/routes/webviews.ts`, `src/runtime/webview/proxy.ts`, `src/runtime/webview/resolve.ts` |
+| Platform library | `src/gapp/platform/messaging.js` |
 | Gapp compile | `src/gapp/compile-gapp.ts`, `src/gapp/registry/` |
 | Fixtures | `fixtures/by-user/`, `src/db/seed.ts` |
 | Health | `src/health-checks.ts`, `src/db/index.ts` (`checkAppTables`, etc.) |
@@ -171,6 +195,21 @@ Optional: `DATABASE_SSL=true`, `POSTMARK_*`, `INSTANCE_*` overrides.
 4. **Function limit:** `maxDuration: 30` in `vercel.json`. Instance first-load can approach this if tar build/extract is slow.
 
 5. **Health vs debug:** `/health` is for monitors (includes auth probe). `/debug` is operator diagnostics — do not expose secrets there.
+
+## Webview proxy
+
+`POST /api/webviews` creates a `webview` row (`slug`, `process_id`, `domain`). The slug becomes a subdomain (`{slug}.app.onetrueos.com`). When a request arrives at that subdomain and no instance matches the slug, `resolveWebviewBySlug` finds the webview row and `proxyWebviewRequest` fetches the upstream.
+
+**Intercept script** (`src/runtime/webview/proxy.ts` → `buildInterceptScript`): injected as the first child of `<head>` in every proxied HTML response. Two sections:
+
+- **REPLACEMENTS** — monkey-patches `fetch()` and `XMLHttpRequest.open()` to route all cross-origin requests through the proxy (`https://api.x.com/path` → `/api.x.com/path`). The proxy rewrites `Origin` / `Referer` to the bound domain before forwarding, so third-party services (e.g. Google Sign-In) see the real site rather than the proxy subdomain.
+- **SHIMS** — patches `document.cookie` setter to strip `Domain=` attributes, so cookies that sites set with their own domain (e.g. `Domain=.twitter.com`) land on the proxy host instead of being rejected by the browser.
+
+**`/cdn-cgi/**`** paths are returned as 404 immediately — these are Cloudflare infrastructure endpoints that don't exist on the upstream origin.
+
+**IP-based rate limiting:** Sites like Instagram 429 unauthenticated requests from known datacenter IPs (Vercel runs on AWS). To bypass this, set `PROXY_URL` to an outbound HTTP/SOCKS5 proxy (e.g. a residential proxy service). Mullvad and other VPN ranges are also typically blocked; a residential proxy service (Bright Data, Oxylabs, Smartproxy) is more reliable. The proxy code reads `PROXY_URL` and passes it as the `dispatcher` to undici's `fetch`.
+
+**Cookie forwarding:** Proxy strips `Cookie` from forwarded request headers (proxy-domain cookies are meaningless to upstream). To pass a user's real session, the app must supply the upstream cookies separately (not yet implemented).
 
 ## Debugging checklist
 
